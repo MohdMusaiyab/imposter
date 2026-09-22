@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"imposter-backend/db"
+	"imposter-backend/handlers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -27,9 +28,13 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
+
+	r.POST("/api/rooms", handlers.HandleCreateRoom)
+	r.GET("/api/rooms/public", handlers.HandleGetPublicRooms)
+	r.GET("/ws/room/:roomId", handlers.ServeWS)
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "9999" // Safely moved off 8080 to prevent standard collisions
 	}
 
 	log.Printf("Server starting on port %s", port)

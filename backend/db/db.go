@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"imposter-backend/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -28,6 +29,17 @@ func InitDB() error {
 		return fmt.Errorf("failed to connect database: %v", err)
 	}
 
+	// 1. Run GORM AutoMigrate to seamlessly create/update PostgreSQL tables based on structs
+	log.Println("Running Auto-Migration for DB schemas...")
+	err = DB.AutoMigrate(&models.WordPair{}, &models.MatchResult{})
+	if err != nil {
+		return fmt.Errorf("failed to migrate tables: %v", err)
+	}
+
+	// 2. Safely seed starting word pairs
+	SeedDatabase(DB)
+
+	// 3. Pool Limits Setup
 	sqlDB, err := DB.DB()
 	if err != nil {
 		return fmt.Errorf("failed to get generic database object: %v", err)
@@ -36,6 +48,6 @@ func InitDB() error {
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetMaxOpenConns(25)
 
-	log.Println("✅ Successfully connected to Neon PostgreSQL Database via GORM")
+	log.Println("✅ Successfully connected & synced with Neon PostgreSQL via GORM")
 	return nil
 }
