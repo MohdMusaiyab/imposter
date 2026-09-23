@@ -55,9 +55,10 @@ export function useGameSocket(roomId: string | null) {
       const session = JSON.parse(sessionStr);
 
       // 2. Safely initiate duplex connection to Go Engine
-      // If NEXT_PUBLIC_BACKEND_WS_URL is set (e.g. wss://imposter.onrender.com), use that.
-      // If empty (local dev), dynamically infer the host address via window.location.
-      const wsBaseUrl = process.env.NEXT_PUBLIC_BACKEND_WS_URL || `ws://${window.location.hostname}:9999`;
+      // If we are playing locally, dynamically bind to local network. 
+      // If deployed on Vercel, securely bind to the Render production server.
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
+      const wsBaseUrl = isLocal ? `ws://${window.location.hostname}:9999` : 'wss://imposter-54yr.onrender.com';
       
       const wsUrl = `${wsBaseUrl}/ws/room/${roomId}?playerId=${session.playerId}&playerName=${encodeURIComponent(session.name)}`;
       const ws = new WebSocket(wsUrl);
