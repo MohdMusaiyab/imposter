@@ -2,40 +2,47 @@ package engine
 
 import "sync"
 
-// GamePhase tracks the exact state the room is currently in.
 type GamePhase string
 
 const (
 	PhaseLobby      GamePhase = "LOBBY"
+	PhaseReveal     GamePhase = "REVEAL"
 	PhaseDiscussion GamePhase = "DISCUSSION"
 	PhaseVoting     GamePhase = "VOTING"
 	PhaseResults    GamePhase = "RESULTS"
 )
 
-// Player holds the active session state of a user natively.
 type Player struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	IsHost     bool   `json:"isHost"`
-	IsImposter bool   `json:"-"` // Hidden from JSON so client cannot cheat
-	Word       string `json:"-"` // Hidden from JSON
+	IsImposter bool   `json:"-"`
+	Word       string `json:"-"`
 	IsDead     bool   `json:"isDead"`
 	HasVoted   bool   `json:"hasVoted"`
-	VotedFor   string `json:"-"` // Hidden target ID
+	VotedFor   string `json:"-"`
 	Score      int    `json:"score"`
+	IsReady    bool   `json:"isReady"`
+	Order      int    `json:"order"`
 }
 
-// Room represents the entire active state of an ongoing game.
 type Room struct {
 	ID             string
 	IsSingleDevice bool
 	IsPrivate      bool
 	Phase          GamePhase
 	Players        map[string]*Player
-	
-	// Game variables
-	ImposterWord string
-	CrewWord     string
-	
-	mu sync.RWMutex
+	ImposterWord   string
+	CrewWord       string
+	LastEliminated string
+	Winner         string
+
+	Mu sync.RWMutex // Exported so handlers can lock during broadcast
+}
+
+// SafeGetMeta returns a safe copy of top-level room metadata without the players map
+func (r *Room) SafeGetMeta() (id, phase, winner, lastElim string, isSingle, isPrivate bool) {
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
+	return r.ID, string(r.Phase), r.Winner, r.LastEliminated, r.IsSingleDevice, r.IsPrivate
 }

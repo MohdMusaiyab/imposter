@@ -3,11 +3,13 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"sync"
+	"time"
 
 	"imposter-backend/db"
 	"imposter-backend/engine"
 	"imposter-backend/models"
-	
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -15,20 +17,23 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	// Security: Allow Next.js frontend to securely connect from any designated origin dynamically
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all for MVP, restrict dynamically later for exact domains
+		return true
 	},
 }
 
-// ServeWS UPGRADES the Gin HTTP request securely into a pure TCP duplex Socket
+var (
+	roomClients = make(map[string]map[string]*websocket.Conn)
+	connMutex   = sync.RWMutex{}
+)
+
 func ServeWS(c *gin.Context) {
 	roomID := c.Param("roomId")
 	playerID := c.Query("playerId")
 	playerName := c.Query("playerName")
 
 	if playerID == "" || playerName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing precise physical player credentials"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing player credentials"})
 		return
 	}
 
@@ -38,102 +43,188 @@ func ServeWS(c *gin.Context) {
 		return
 	}
 
-	// Upgrade pipeline natively
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade socket: %v", err)
+		log.Printf("WS Upgrade Error: %v", err)
 		return
 	}
 
-	// Safely map player to the Engine Room memory
 	if err := room.AddPlayer(playerID, playerName); err != nil {
-		conn.WriteJSON(map[string]string{"error": err.Error()})
+		conn.WriteJSON(gin.H{"error": err.Error()})
 		conn.Close()
 		return
 	}
 
-	// Send an immediate acknowledgement of GameState so client can blindly sync UI securely
-	rState := mapRoomState(room)
-	conn.WriteJSON(gin.H{"type": "ROOM_STATE", "payload": rState})
+	connMutex.Lock()
+	if roomClients[roomID] == nil {
+		roomClients[roomID] = make(map[string]*websocket.Conn)
+	}
+	roomClients[roomID][playerID] = conn
+	connMutex.Unlock()
 
-	// Spin a goroutine loop for listening to incoming clicks
+	broadcastStateToRoom(room)
+
 	go readPump(conn, room, playerID)
 }
 
-// readPump constantly evaluates byte-streams arriving from Next.js natively
 func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	defer func() {
-		// Cleanup connection entirely when closed
+		connMutex.Lock()
+		if roomClients[room.ID] != nil {
+			delete(roomClients[room.ID], playerID)
+		}
+		connMutex.Unlock()
 		conn.Close()
-		// TODO: Engine handle disconnection grace periods (TTL) natively
+
+		go func() {
+			time.Sleep(10 * time.Second)
+			connMutex.RLock()
+			stillConnected := false
+			if roomClients[room.ID] != nil {
+				_, stillConnected = roomClients[room.ID][playerID]
+			}
+			connMutex.RUnlock()
+
+			if !stillConnected {
+				room.RemovePlayer(playerID)
+				broadcastStateToRoom(room)
+			}
+		}()
 	}()
 
 	for {
 		var action map[string]interface{}
-		err := conn.ReadJSON(&action)
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket Abnormality: %v", err)
-			}
+		if err := conn.ReadJSON(&action); err != nil {
 			break
 		}
 
-		// Handle active game pipeline clicks here
-		// Example: "START_GAME", "VOTE_SUBMITTED"
 		actionType, ok := action["type"].(string)
 		if !ok {
 			continue
 		}
 
 		switch actionType {
+		case "LEAVE_ROOM":
+			room.RemovePlayer(playerID)
+			broadcastStateToRoom(room)
+			return // Exit cleanly; defer handles WS teardown
+
+		case "CLOSE_ROOM":
+			engine.Manager.RemoveRoom(room.ID)
+			connMutex.RLock()
+			conns := roomClients[room.ID]
+			connMutex.RUnlock()
+			for _, c := range conns {
+				c.WriteJSON(gin.H{"error": "Room closed by host."})
+				c.Close()
+			}
+			return
+
 		case "START":
-			// Securely query a 100% random word pair out of Postgres natively on the spot
 			var wp models.WordPair
 			if err := db.DB.Order("RANDOM()").First(&wp).Error; err != nil {
-				log.Printf("GORM query randomly failing, executing fallback words securely: %v", err)
 				wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
 			}
 			room.StartGame(wp.WordA, wp.WordB)
 
-		case "END_GAME":
-			// Distribute round points based on parameters
-			imposterCaught, _ := action["imposterCaught"].(bool)
-			room.ResolveRound(imposterCaught)
+		case "MARK_READY":
+			room.MarkReady(playerID)
 
-			winner := "IMPOSTER"
-			if imposterCaught {
-				winner = "CREW"
-			}
+		case "CONTINUE_DISCUSSION":
+			room.AdvanceToDiscussion()
 
-			// Generate GORM Metric Model natively
-			result := models.MatchResult{
-				RoomCode:     room.ID,
-				Winner:       winner,
-				TotalPlayers: len(room.Players),
-				ImposterWon:  !imposterCaught,
+		case "PROGRESS_VOTING":
+			room.TransitionToVoting()
+
+		case "CAST_VOTE":
+			targetId, _ := action["targetId"].(string)
+			room.RegisterVote(playerID, targetId)
+
+			room.Mu.RLock()
+			winner := room.Winner
+			totalPlayers := len(room.Players)
+			roomID := room.ID
+			room.Mu.RUnlock()
+
+			if winner == "CREW" || winner == "IMPOSTER" {
+				res := models.MatchResult{RoomCode: roomID, Winner: winner, TotalPlayers: totalPlayers, ImposterWon: winner == "IMPOSTER"}
+				go func(r models.MatchResult) { db.DB.Create(&r) }(res)
 			}
 			
-			// Commit the transaction inside an isolated lightweight Goroutine so the network I/O loop isn't bottlenecked at all
-			go func(res models.MatchResult) {
-				if err := db.DB.Create(&res).Error; err != nil {
-					log.Printf("🚨 GORM insertion failure for Match metrics: %v", err)
+		case "ADD_LOCAL_PLAYER":
+			if room.IsSingleDevice {
+				newId, _ := action["id"].(string)
+				newName, _ := action["name"].(string)
+				if newId != "" && newName != "" {
+					room.AddPlayer(newId, newName)
 				}
-			}(result)
+			}
+			
+		case "FORCE_ELIMINATE":
+			if room.IsSingleDevice {
+				targetId, _ := action["targetId"].(string)
+				room.ForceEliminate(targetId)
+			}
+
+		case "NEXT_ROUND":
+			room.ResetForNextRound()
 		}
-		
-		// Every action essentially mandates the new state is distributed
+
 		broadcastStateToRoom(room)
 	}
 }
 
-// mapRoomState secures the exact dataset needed by the Frontend preventing any memory cheating natively
-func mapRoomState(room *engine.Room) interface{} {
-	// Custom mapping logic later to hide imposter data cleanly across the pipe.
-	// For now just dumping raw room (since IsImposter is natively hidden in models via `json:"-"`).
-	return room
+func mapRoomState(room *engine.Room, connectionPlayerID string) map[string]interface{} {
+	// Use exported Mu to safely read all fields
+	room.Mu.RLock()
+	defer room.Mu.RUnlock()
+
+	playersExport := make(map[string]interface{})
+
+	for id, p := range room.Players {
+		pub := map[string]interface{}{
+			"id":       p.ID,
+			"name":     p.Name,
+			"isHost":   p.IsHost,
+			"isDead":   p.IsDead,
+			"hasVoted": p.HasVoted,
+			"score":    p.Score,
+			"isReady":  p.IsReady,
+			"order":    p.Order,
+		}
+
+		// Only reveal secret info to the correct player (or in results/single-device)
+		if id == connectionPlayerID || room.Phase == engine.PhaseResults || room.IsSingleDevice {
+			pub["Word"] = p.Word
+			pub["IsImposter"] = p.IsImposter
+		}
+		playersExport[id] = pub
+	}
+
+	return map[string]interface{}{
+		"ID":             room.ID,
+		"IsSingleDevice": room.IsSingleDevice,
+		"IsPrivate":      room.IsPrivate,
+		"Phase":          room.Phase,
+		"Winner":         room.Winner,
+		"LastEliminated": room.LastEliminated,
+		"Players":        playersExport,
+	}
 }
 
-// broadcastStateToRoom simulates pushing the memory state back out.
 func broadcastStateToRoom(room *engine.Room) {
-	// Next iteration will include a hub loop to actively push to actual connections mapped individually 
+	connMutex.RLock()
+	conns, exists := roomClients[room.ID]
+	connMutex.RUnlock()
+
+	if !exists {
+		return
+	}
+
+	for pid, conn := range conns {
+		payload := mapRoomState(room, pid)
+		if err := conn.WriteJSON(gin.H{"type": "ROOM_STATE", "payload": payload}); err != nil {
+			conn.Close()
+		}
+	}
 }
