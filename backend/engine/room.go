@@ -10,8 +10,10 @@ func (r *Room) AddPlayer(playerID, name string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
+	// Reconnect case: player re-joins with same ID (e.g. page refresh)
 	if player, exists := r.Players[playerID]; exists {
 		player.Name = name
+		r.LastActivity = time.Now()
 		return nil
 	}
 
@@ -24,12 +26,18 @@ func (r *Room) AddPlayer(playerID, name string) error {
 		ID:     playerID,
 		Name:   name,
 		IsHost: isHost,
-		Order:  len(r.Players),
+		// Use the dedicated counter instead of len(Players).
+		// len() decreases when players leave during lobby, which would give
+		// the next joiner a duplicate Order value and break UI sort order.
+		Order: r.nextOrder,
 	}
+	r.nextOrder++
+	r.LastActivity = time.Now()
 	return nil
 }
 
-// RemovePlayer gracefully excises a user. If mid-match, treats as an elimination / forfeit natively.
+// RemovePlayer gracefully excises a user. If mid-match, treats as an
+// elimination / forfeit. Host rights are transferred to the next player.
 func (r *Room) RemovePlayer(playerID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
@@ -40,22 +48,22 @@ func (r *Room) RemovePlayer(playerID string) {
 	}
 
 	isForfeitHost := p.IsHost
+	r.LastActivity = time.Now()
 
 	if r.Phase == PhaseLobby {
 		delete(r.Players, playerID)
 	} else {
-		// Mid-game Forfeit mapping completely natively
 		if p.IsDead {
-			// Already theoretically eliminated, just transfer host if needed
+			// Already eliminated — only need to transfer host below if needed
 		} else {
 			p.IsDead = true
 			if p.IsImposter {
 				r.Winner = "CREW"
 				r.Phase = PhaseResults
 				r.LastEliminated = p.Name + " (Left Match)"
-				for _, p := range r.Players {
-					if !p.IsImposter {
-						p.Score += 100
+				for _, mp := range r.Players {
+					if !mp.IsImposter {
+						mp.Score += 100
 					}
 				}
 			} else {
@@ -75,7 +83,7 @@ func (r *Room) RemovePlayer(playerID string) {
 						}
 					}
 				} else {
-					// Manually map automatic state advancement in case the dropped target was blocking sequence naturally
+					// Advance phases if the departing player was the last one blocking
 					if r.Phase == PhaseReveal {
 						allReady := true
 						for _, op := range r.Players {
@@ -84,7 +92,9 @@ func (r *Room) RemovePlayer(playerID string) {
 								break
 							}
 						}
-						if allReady { r.Phase = PhaseDiscussion }
+						if allReady {
+							r.Phase = PhaseDiscussion
+						}
 					} else if r.Phase == PhaseVoting {
 						allVoted := true
 						for _, op := range r.Players {
@@ -93,18 +103,24 @@ func (r *Room) RemovePlayer(playerID string) {
 								break
 							}
 						}
-						if allVoted { r.tallyVotesLocked() }
+						if allVoted {
+							r.tallyVotesLocked()
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// Always dynamically route administrative rights
+	// Transfer host rights to the first remaining player
 	if isForfeitHost {
-		if r.Phase != PhaseLobby { p.IsHost = false }
+		if r.Phase != PhaseLobby {
+			p.IsHost = false
+		}
 		for _, other := range r.Players {
-			if r.Phase != PhaseLobby && other.ID == playerID { continue }
+			if r.Phase != PhaseLobby && other.ID == playerID {
+				continue
+			}
 			other.IsHost = true
 			break
 		}
@@ -119,11 +135,10 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 		return errors.New("need at least 3 players to start")
 	}
 
-	r.CrewWord = crewWord
-	r.ImposterWord = imposterWord
 	r.Phase = PhaseReveal
 	r.Winner = "NONE"
 	r.LastEliminated = ""
+	r.LastActivity = time.Now()
 
 	var pids []string
 	for id := range r.Players {
@@ -136,14 +151,23 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	imposterID := pids[rng.Intn(len(pids))]
+	imposterIdx := rng.Intn(len(pids))
 
-	for _, p := range r.Players {
-		if p.ID == imposterID {
-			p.IsImposter = true
-			p.Word = r.ImposterWord
+	// Randomly swap which word belongs to Crew vs Imposter.
+	// Previously WordA was always Crew — now it's a 50/50 coin flip,
+	// preventing players from deducing their role by recognising patterns.
+	if rng.Intn(2) == 0 {
+		crewWord, imposterWord = imposterWord, crewWord
+	}
+	r.CrewWord = crewWord
+	r.ImposterWord = imposterWord
+
+	for i, pid := range pids {
+		if i == imposterIdx {
+			r.Players[pid].IsImposter = true
+			r.Players[pid].Word = r.ImposterWord
 		} else {
-			p.Word = r.CrewWord
+			r.Players[pid].Word = r.CrewWord
 		}
 	}
 
@@ -168,12 +192,14 @@ func (r *Room) MarkReady(playerID string) {
 	if allReady && r.Phase == PhaseReveal {
 		r.Phase = PhaseDiscussion
 	}
+	r.LastActivity = time.Now()
 }
 
 func (r *Room) AdvanceToDiscussion() {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 	r.Phase = PhaseDiscussion
+	r.LastActivity = time.Now()
 }
 
 func (r *Room) TransitionToVoting() {
@@ -181,6 +207,7 @@ func (r *Room) TransitionToVoting() {
 	defer r.Mu.Unlock()
 
 	r.Phase = PhaseVoting
+	r.LastActivity = time.Now()
 	for _, p := range r.Players {
 		p.HasVoted = false
 		p.VotedFor = ""
@@ -202,6 +229,7 @@ func (r *Room) RegisterVote(voterID, targetID string) {
 
 	voter.VotedFor = targetID
 	voter.HasVoted = true
+	r.LastActivity = time.Now()
 
 	allVoted := true
 	for _, p := range r.Players {
@@ -216,7 +244,8 @@ func (r *Room) RegisterVote(voterID, targetID string) {
 	}
 }
 
-// tallyVotesLocked: caller MUST already hold Mu.Lock()
+// tallyVotesLocked tallies votes and resolves the round.
+// Caller MUST already hold Mu.Lock().
 func (r *Room) tallyVotesLocked() {
 	votes := make(map[string]int)
 	for _, p := range r.Players {
@@ -277,34 +306,46 @@ func (r *Room) tallyVotesLocked() {
 	}
 }
 
-// ForceEliminate immediately bypasses secret voting math to support single-device consensus logic
+// ForceEliminate bypasses vote-counting for single-device consensus mode.
+// Host selects the group's agreed target directly.
 func (r *Room) ForceEliminate(targetID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
-	if r.Phase != PhaseVoting { return }
-	
+	if r.Phase != PhaseVoting {
+		return
+	}
+
 	elimPlayer, ok := r.Players[targetID]
-	if !ok || elimPlayer.IsDead { return }
+	if !ok || elimPlayer.IsDead {
+		return
+	}
 
 	elimPlayer.IsDead = true
 	r.LastEliminated = elimPlayer.Name
 	r.Phase = PhaseResults
+	r.LastActivity = time.Now()
 
 	if elimPlayer.IsImposter {
 		r.Winner = "CREW"
 		for _, p := range r.Players {
-			if !p.IsImposter { p.Score += 100 }
+			if !p.IsImposter {
+				p.Score += 100
+			}
 		}
 	} else {
 		aliveCount := 0
 		for _, p := range r.Players {
-			if !p.IsDead { aliveCount++ }
+			if !p.IsDead {
+				aliveCount++
+			}
 		}
 		if aliveCount <= 2 {
 			r.Winner = "IMPOSTER"
 			for _, p := range r.Players {
-				if p.IsImposter { p.Score += 250 }
+				if p.IsImposter {
+					p.Score += 250
+				}
 			}
 		} else {
 			r.Winner = "NONE"
@@ -321,6 +362,7 @@ func (r *Room) ResetForNextRound() {
 	r.CrewWord = ""
 	r.Winner = ""
 	r.LastEliminated = ""
+	r.LastActivity = time.Now()
 
 	for _, p := range r.Players {
 		p.IsImposter = false

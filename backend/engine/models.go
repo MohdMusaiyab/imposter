@@ -1,6 +1,9 @@
 package engine
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type GamePhase string
 
@@ -37,10 +40,17 @@ type Room struct {
 	LastEliminated string
 	Winner         string
 
+	// nextOrder is an auto-incrementing counter. Safer than len(Players)
+	// because deletions from the map during a lobby would cause order collisions.
+	nextOrder    int
+	// LastActivity is updated on every meaningful action so the TTL
+	// cleanup goroutine can safely evict idle/abandoned rooms.
+	LastActivity time.Time
+
 	Mu sync.RWMutex // Exported so handlers can lock during broadcast
 }
 
-// SafeGetMeta returns a safe copy of top-level room metadata without the players map
+// SafeGetMeta returns a safe copy of top-level room metadata without the players map.
 func (r *Room) SafeGetMeta() (id, phase, winner, lastElim string, isSingle, isPrivate bool) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()

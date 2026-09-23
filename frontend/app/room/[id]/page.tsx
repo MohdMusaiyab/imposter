@@ -1,6 +1,7 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import type { GameState, Player } from "@/hooks/useGameSocket";
 import Link from "next/link";
@@ -11,14 +12,16 @@ export default function GameRoomWrapper({ params }: { params: Promise<{ id: stri
 }
 
 function GameRoom({ roomId }: { roomId: string }) {
+  const router = useRouter();
   const { gameState, isConnected, error, sendAction } = useGameSocket(roomId);
-  const [localPlayerId, setLocalPlayerId] = useState<string>("");
 
-  useEffect(() => {
-    const sessionStr = localStorage.getItem("imposter_session");
-    if (sessionStr) {
-      setLocalPlayerId(JSON.parse(sessionStr).playerId);
-    }
+  // Read playerId synchronously from localStorage — no effect needed here
+  // since this value never changes for the lifetime of the component.
+  const localPlayerId = React.useMemo(() => {
+    try {
+      const s = localStorage.getItem("imposter_session");
+      return s ? JSON.parse(s).playerId ?? "" : "";
+    } catch { return ""; }
   }, []);
 
   if (error) {
@@ -52,7 +55,7 @@ function GameRoom({ roomId }: { roomId: string }) {
   const renderPhaseView = () => {
     switch (gameState.Phase) {
       case "LOBBY":
-        return <LobbyView gameState={gameState} isHost={isHost} sendAction={sendAction} />;
+        return <LobbyView gameState={gameState} isHost={isHost} localPlayerId={localPlayerId} sendAction={sendAction} />;
       case "REVEAL":
         return gameState.IsSingleDevice 
           ? <RevealViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
@@ -64,7 +67,7 @@ function GameRoom({ roomId }: { roomId: string }) {
           ? <VotingViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
           : <VotingView gameState={gameState} currentPlayer={currentPlayer} isHost={isHost} sendAction={sendAction} />;
       case "RESULTS":
-        return <ResultsView gameState={gameState} isHost={isHost} sendAction={sendAction} />;
+        return <ResultsView gameState={gameState} isHost={isHost} localPlayerId={localPlayerId} sendAction={sendAction} />;
       default:
         return <div className="text-[#ff3b3b]">Unknown game phase.</div>;
     }
@@ -72,7 +75,7 @@ function GameRoom({ roomId }: { roomId: string }) {
 
   const handleGlobalLeave = () => {
     sendAction("LEAVE_ROOM");
-    window.location.href = "/";
+    router.push("/");
   };
 
   return (
@@ -94,8 +97,13 @@ function GameRoom({ roomId }: { roomId: string }) {
             Phase: <span className="text-[#ff3b3b] ml-1">{gameState.Phase}</span>
           </div>
           {currentPlayer && !gameState.IsSingleDevice && (
-            <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-white/10">
-              Score: <span className="text-[#9d00ff] ml-1 font-bold">{currentPlayer.score}</span>
+            <div className="flex gap-2">
+              <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-white/10 hidden sm:block">
+                Playing as: <span className="text-white ml-1">{currentPlayer.name}</span>
+              </div>
+              <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-white/10">
+                Score: <span className="text-[#9d00ff] ml-1 font-bold">{currentPlayer.score}</span>
+              </div>
             </div>
           )}
           {gameState.IsSingleDevice && (
@@ -117,7 +125,7 @@ function GameRoom({ roomId }: { roomId: string }) {
 // Multi-Device & Hybrid Views
 // ─────────────────────────────────────────────
 
-function LobbyView({ gameState, isHost, sendAction }: { gameState: GameState; isHost: boolean; sendAction: (type: string, payload?: Record<string, unknown>) => void }) {
+function LobbyView({ gameState, isHost, localPlayerId, sendAction }: { gameState: GameState; isHost: boolean; localPlayerId: string; sendAction: (type: string, payload?: Record<string, unknown>) => void }) {
   // Sort robustly based entirely on connection instantiation indexed naturally by Go
   const players = Object.values(gameState.Players).sort((a, b) => a.order - b.order);
   const playersCount = players.length;
@@ -135,8 +143,10 @@ function LobbyView({ gameState, isHost, sendAction }: { gameState: GameState; is
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {players.map((p) => (
-          <div key={p.id} className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
-            <span className="font-semibold text-lg">{p.name} {p.isDead && "(LEFT)"}</span>
+          <div key={p.id} className={`p-4 rounded-xl border flex items-center justify-between ${p.id === localPlayerId ? 'bg-white/10 border-white/30 shadow-[0_0_10px_rgba(255,255,255,0.1)]' : 'bg-white/5 border-white/10'}`}>
+            <span className={`font-semibold text-lg ${p.id === localPlayerId ? 'text-white' : ''}`}>
+              {p.name} {p.id === localPlayerId && <span className="text-[#9d00ff] ml-1 opacity-80 text-sm italic">(You)</span>} {p.isDead && "(LEFT)"}
+            </span>
             {p.isHost && <span className="text-xs font-bold text-[#9d00ff] bg-[#9d00ff]/20 px-2 py-1 rounded-md">ADMIN</span>}
           </div>
         ))}
@@ -214,7 +224,7 @@ function DiscussionView({ currentPlayer, isHost, sendAction }: { currentPlayer: 
   );
 }
 
-function ResultsView({ gameState, isHost, sendAction }: { gameState: GameState; isHost: boolean; sendAction: (type: string) => void }) {
+function ResultsView({ gameState, isHost, localPlayerId, sendAction }: { gameState: GameState; isHost: boolean; localPlayerId: string; sendAction: (type: string) => void }) {
   const gameContinues = gameState.Winner === "NONE";
 
   return (
@@ -240,9 +250,9 @@ function ResultsView({ gameState, isHost, sendAction }: { gameState: GameState; 
         {Object.values(gameState.Players)
           .sort((a, b) => b.score - a.score)
           .map((p) => (
-            <div key={p.id} className="p-5 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center">
+            <div key={p.id} className={`p-5 border rounded-xl flex justify-between items-center ${p.id === localPlayerId ? 'bg-white/10 border-white/30' : 'bg-white/5 border-white/10'}`}>
               <span className={`font-bold text-xl ${p.isDead ? "line-through text-white/30" : "text-white"}`}>
-                {p.name}
+                {p.name} {p.id === localPlayerId && <span className="text-[#9d00ff] ml-2 opacity-80 text-sm italic">(You)</span>}
                 {p.isDead && <span className="text-xs uppercase ml-2 text-[#ff3b3b] border border-[#ff3b3b]/30 px-2 py-1 rounded-md">Out</span>}
               </span>
               <span className="text-[#9d00ff] font-bold text-xl">{p.score} pts</span>
@@ -277,7 +287,7 @@ function RevealView({ currentPlayer, isHost, sendAction }: { currentPlayer: Play
         <div className="flex flex-col items-center gap-8">
           <div className="p-10 bg-[#0a0e17] rounded-3xl w-full border border-white/5">
             <span className="text-5xl font-black tracking-widest text-[#ff3b3b] drop-shadow-[0_0_15px_rgba(255,59,59,0.5)]">
-              {(currentPlayer as Player & { Word?: string }).Word ?? "—"}
+              {currentPlayer.Word ?? "—"}
             </span>
           </div>
           <button
@@ -389,7 +399,7 @@ function RevealViewSingleDevice({ gameState, isHost, sendAction }: { gameState: 
         <div className="p-10 bg-[#0a0e17] rounded-3xl w-full border border-white/5 relative overflow-hidden group">
           {showWord ? (
             <span className="text-6xl font-black tracking-widest text-[#ff3b3b] drop-shadow-[0_0_15px_rgba(255,59,59,0.5)] fade-in">
-              {(currentSeat as Player & { Word?: string }).Word ?? "—"}
+              {currentSeat.Word ?? "—"}
             </span>
           ) : (
             <div className="text-[#a0aec0] italic text-lg py-4">Word securely hidden</div>
@@ -428,7 +438,7 @@ function VotingViewSingleDevice({ gameState, isHost, sendAction }: { gameState: 
   return (
     <div className="glass-panel w-full max-w-3xl p-10 border border-[#ff3b3b]/30 shadow-[0_0_30px_rgba(255,59,59,0.15)]">
       <h2 className="text-4xl font-extrabold mb-4 text-center text-[#ff3b3b] uppercase tracking-tight">Public Consensus Vote</h2>
-      <p className="text-center text-[#a0aec0] mb-8 font-medium">Discuss out loud. Admin executes the group's final decision natively.</p>
+      <p className="text-center text-[#a0aec0] mb-8 font-medium">Discuss out loud. Admin executes the group&apos;s final decision.</p>
 
       <div className="flex flex-col gap-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
