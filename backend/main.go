@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"imposter-backend/db"
-	"imposter-backend/engine"
 	"imposter-backend/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -16,11 +15,7 @@ import (
 // CORSMiddleware authorizes cross-origin fetch protocols naturally
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		if origin == "" {
-			origin = "http://localhost:3001" // Default fallback
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
@@ -40,10 +35,6 @@ func main() {
 	if err := db.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-
-	// Start the background goroutine that evicts idle/empty rooms every 10 min.
-	// Without this, abandoned lobbies accumulate in memory indefinitely.
-	engine.Manager.StartCleanup()
 	r := gin.Default()
 	r.Use(CORSMiddleware())
 
