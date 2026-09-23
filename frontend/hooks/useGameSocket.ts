@@ -10,6 +10,8 @@ export interface Player {
   score: number;
   isReady: boolean;
   order: number;
+  Word?: string;
+  IsImposter?: boolean;
 }
 
 export interface GameState {

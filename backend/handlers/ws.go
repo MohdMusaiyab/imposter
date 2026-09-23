@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -31,7 +32,15 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		allowedOrigin := os.Getenv("FRONTEND_URL")
+		if allowedOrigin == "" {
+			// Local development / LAN: Allow everything universally
+			return true
+		}
+		
+		// Production: Strictly match the WebSocket handshake Origin against the Vercel app
+		origin := r.Header.Get("Origin")
+		return origin == allowedOrigin
 	},
 }
 
