@@ -5,47 +5,150 @@ import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import type { GameState, Player } from "@/hooks/useGameSocket";
 import Link from "next/link";
+import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 
-export default function GameRoomWrapper({ params }: { params: Promise<{ id: string }> }) {
+const space = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"] });
+const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
+const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"] });
+
+// ─── Shared style helpers ────────────────────────────────────────────────────
+const cardStyle: React.CSSProperties = {
+  background: "#fff",
+  border: "1.5px solid #16161a",
+  boxShadow: "5px 6px 0 #e9e9ee",
+  padding: "32px 28px",
+  position: "relative",
+  width: "100%",
+  maxWidth: 620,
+};
+
+const btnPrimary: React.CSSProperties = {
+  padding: "14px 28px",
+  background: "#e8433a",
+  color: "#fff",
+  border: "1.5px solid #e8433a",
+  boxShadow: "4px 4px 0 #16161a",
+  borderRadius: 3,
+  fontWeight: 700,
+  fontSize: 15,
+  cursor: "pointer",
+  transition: "all .18s",
+  width: "100%",
+};
+
+const btnSecondary: React.CSSProperties = {
+  padding: "14px 28px",
+  background: "#fff",
+  color: "#16161a",
+  border: "1.5px solid #16161a",
+  boxShadow: "4px 4px 0 #e9e9ee",
+  borderRadius: 3,
+  fontWeight: 700,
+  fontSize: 15,
+  cursor: "pointer",
+  transition: "all .18s",
+  width: "100%",
+};
+
+const btnGhost: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  fontSize: 11,
+  color: "#77788a",
+  cursor: "pointer",
+  letterSpacing: "0.8px",
+  textTransform: "uppercase",
+  textDecoration: "underline",
+  padding: "4px 0",
+};
+
+const tagStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  fontSize: 10,
+  letterSpacing: "1px",
+  padding: "3px 9px",
+  borderRadius: 3,
+  fontWeight: 600,
+};
+
+// ─── Wrapper ────────────────────────────────────────────────────────────────
+export default function GameRoomWrapper({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const resolvedParams = use(params);
   return <GameRoom roomId={resolvedParams.id} />;
 }
 
+// ─── Main room shell ─────────────────────────────────────────────────────────
 function GameRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
   const { gameState, isConnected, error, sendAction } = useGameSocket(roomId);
 
-  // Read playerId synchronously from localStorage — no effect needed here
-  // since this value never changes for the lifetime of the component.
   const localPlayerId = React.useMemo(() => {
     try {
       const s = localStorage.getItem("imposter_session");
-      return s ? JSON.parse(s).playerId ?? "" : "";
-    } catch { return ""; }
+      return s ? (JSON.parse(s).playerId ?? "") : "";
+    } catch {
+      return "";
+    }
   }, []);
 
+  // ── Error screen ──
   if (error) {
     return (
-      <main className="w-full flex items-center justify-center min-h-screen text-center p-8">
-        <div className="glass-panel p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-4 text-[#ff3b3b]">Connection Terminated</h1>
-          <p className="text-[#a0aec0] mb-6">{error}</p>
-          <Link href="/" className="bg-white/10 px-4 py-2 rounded-xl border border-white/20 transition-all hover:bg-white/20 font-semibold">
-            Return Home
+      <div
+        className={`board ${space.className}`}
+        style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <div className="board-lines" />
+        <div style={{ ...cardStyle, maxWidth: 420, textAlign: "center", transform: "rotate(-1deg)" }}>
+          <span className="corner-tape a" />
+          <div
+            className={mono.className}
+            style={{ fontSize: 11, letterSpacing: 1, color: "#e8433a", border: "1px solid #e8433a", padding: "3px 9px", display: "inline-block", marginBottom: 16 }}
+          >
+            CASE CLOSED · CONNECTION LOST
+          </div>
+          <p style={{ color: "#77788a", marginBottom: 24, fontSize: 14 }}>{error}</p>
+          <Link href="/" className={`btn btn-primary ${space.className}`} style={{ display: "inline-block" }}>
+            RETURN HOME
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
+  // ── Loading screen ──
   if (!isConnected || !gameState) {
     return (
-      <main className="w-full flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#ff3b3b] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-[#a0aec0] font-bold tracking-widest animate-pulse">SYNCING SECURE CONNECTION...</p>
+      <div
+        className={`board ${space.className}`}
+        style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <div className="board-lines" />
+        <div style={{ textAlign: "center" }}>
+          {/* animated spinner made of border */}
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              border: "3px solid #e9e9ee",
+              borderTopColor: "#e8433a",
+              borderRadius: "50%",
+              margin: "0 auto 20px",
+              animation: "spin 0.9s linear infinite",
+            }}
+          />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          <p className={mono.className} style={{ fontSize: 11, letterSpacing: "1.5px", color: "#77788a" }}>
+            SYNCING SECURE CONNECTION...
+          </p>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -55,80 +158,203 @@ function GameRoom({ roomId }: { roomId: string }) {
   const renderPhaseView = () => {
     switch (gameState.Phase) {
       case "LOBBY":
-        return <LobbyView gameState={gameState} isHost={isHost} localPlayerId={localPlayerId} sendAction={sendAction} />;
+        return (
+          <LobbyView
+            gameState={gameState}
+            isHost={isHost}
+            localPlayerId={localPlayerId}
+            sendAction={sendAction}
+          />
+        );
       case "REVEAL":
-        return gameState.IsSingleDevice 
-          ? <RevealViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
-          : <RevealView currentPlayer={currentPlayer} isHost={isHost} sendAction={sendAction} />;
+        return gameState.IsSingleDevice ? (
+          <RevealViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
+        ) : (
+          <RevealView currentPlayer={currentPlayer} isHost={isHost} sendAction={sendAction} />
+        );
       case "DISCUSSION":
-        return <DiscussionView currentPlayer={currentPlayer} isHost={isHost} sendAction={sendAction} />;
+        return (
+          <DiscussionView
+            currentPlayer={currentPlayer}
+            isHost={isHost}
+            sendAction={sendAction}
+          />
+        );
       case "VOTING":
-        return gameState.IsSingleDevice
-          ? <VotingViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
-          : <VotingView gameState={gameState} currentPlayer={currentPlayer} isHost={isHost} sendAction={sendAction} />;
+        return gameState.IsSingleDevice ? (
+          <VotingViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
+        ) : (
+          <VotingView
+            gameState={gameState}
+            currentPlayer={currentPlayer}
+            isHost={isHost}
+            sendAction={sendAction}
+          />
+        );
       case "RESULTS":
-        return <ResultsView gameState={gameState} isHost={isHost} localPlayerId={localPlayerId} sendAction={sendAction} />;
+        return (
+          <ResultsView
+            gameState={gameState}
+            isHost={isHost}
+            localPlayerId={localPlayerId}
+            sendAction={sendAction}
+          />
+        );
       default:
-        return <div className="text-[#ff3b3b]">Unknown game phase.</div>;
+        return (
+          <p className={mono.className} style={{ color: "#e8433a", fontSize: 13 }}>
+            Unknown game phase.
+          </p>
+        );
     }
   };
 
-  const handleGlobalLeave = () => {
-    sendAction("LEAVE_ROOM");
-    router.push("/");
-  };
-
   return (
-    <main className="w-full max-w-7xl mx-auto px-6 relative min-h-screen flex flex-col pt-12 pb-8">
-      <header className="w-full flex justify-between items-center bg-[#121826]/40 p-6 rounded-2xl border border-white/5 backdrop-blur-md mb-8">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            Room: <span className="text-[#9d00ff] font-mono">{gameState.ID}</span>
-          </h1>
-          <button 
-            onClick={handleGlobalLeave}
-            className="px-3 py-1 bg-[#ff3b3b]/10 text-[#ff3b3b] border border-[#ff3b3b]/20 rounded-md text-xs font-bold hover:bg-[#ff3b3b]/20 transition-all uppercase"
+    <div
+      className={`board ${space.className}`}
+      style={{ minHeight: "100svh", display: "flex", flexDirection: "column" }}
+    >
+      <div className="board-lines" />
+
+      {/* Header bar */}
+      <header
+        style={{
+          position: "relative",
+          zIndex: 6,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+          padding: "18px clamp(16px,4vw,48px)",
+          background: "#fff",
+          borderBottom: "1.5px solid #e9e9ee",
+        }}
+      >
+        {/* Left: logo + room id */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div className="logo">
+            <span className={`badge-icon ${mono.className}`}>3</span>
+            IMPOSTER
+          </div>
+          <div
+            className={mono.className}
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.8px",
+              color: "#77788a",
+              borderLeft: "1px solid #e9e9ee",
+              paddingLeft: 14,
+            }}
+          >
+            CASE{" "}
+            <span style={{ color: "#e8433a", fontWeight: 600 }}>#{gameState.ID}</span>
+          </div>
+        </div>
+
+        {/* Right: phase badge + player info + leave */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span
+            className={mono.className}
+            style={{
+              ...tagStyle,
+              background: "#fff8e6",
+              color: "#b07a00",
+              border: "1px solid #f0b429",
+            }}
+          >
+            {gameState.Phase}
+          </span>
+
+          {gameState.IsSingleDevice && (
+            <span
+              className={mono.className}
+              style={{
+                ...tagStyle,
+                background: "#f0ecfc",
+                color: "#8c5cd8",
+                border: "1px solid #8c5cd8",
+              }}
+            >
+              HOTSEAT
+            </span>
+          )}
+
+          {currentPlayer && !gameState.IsSingleDevice && (
+            <>
+              <span
+                className={mono.className}
+                style={{ fontSize: 12, color: "#77788a" }}
+              >
+                {currentPlayer.name}
+              </span>
+              <span
+                className={mono.className}
+                style={{
+                  ...tagStyle,
+                  background: "#f0ecfc",
+                  color: "#8c5cd8",
+                  border: "1px solid #e9e9ee",
+                }}
+              >
+                {currentPlayer.score} pts
+              </span>
+            </>
+          )}
+
+          <button
+            onClick={() => { sendAction("LEAVE_ROOM"); router.push("/"); }}
+            className={mono.className}
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.8px",
+              color: "#e8433a",
+              border: "1px solid #e8433a",
+              background: "none",
+              padding: "5px 10px",
+              borderRadius: 3,
+              cursor: "pointer",
+              textTransform: "uppercase",
+            }}
           >
             Leave
           </button>
         </div>
-        <div className="flex gap-4 items-center">
-          <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-white/10 hidden sm:block">
-            Phase: <span className="text-[#ff3b3b] ml-1">{gameState.Phase}</span>
-          </div>
-          {currentPlayer && !gameState.IsSingleDevice && (
-            <div className="flex gap-2">
-              <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-white/10 hidden sm:block">
-                Playing as: <span className="text-white ml-1">{currentPlayer.name}</span>
-              </div>
-              <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-white/10">
-                Score: <span className="text-[#9d00ff] ml-1 font-bold">{currentPlayer.score}</span>
-              </div>
-            </div>
-          )}
-          {gameState.IsSingleDevice && (
-             <div className="px-4 py-2 bg-black/40 rounded-lg text-sm font-semibold border border-[#9d00ff]/30 text-[#9d00ff]">
-               HOTSEAT MODE
-             </div>
-          )}
-        </div>
       </header>
 
-      <div className="flex-1 w-full flex justify-center">
+      {/* Phase content */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          padding: "40px clamp(16px,4vw,40px) 60px",
+          position: "relative",
+          zIndex: 5,
+        }}
+      >
         {renderPhaseView()}
       </div>
-    </main>
+    </div>
   );
 }
 
 // ─────────────────────────────────────────────
-// Multi-Device & Hybrid Views
+// LOBBY VIEW
 // ─────────────────────────────────────────────
-
-function LobbyView({ gameState, isHost, localPlayerId, sendAction }: { gameState: GameState; isHost: boolean; localPlayerId: string; sendAction: (type: string, payload?: Record<string, unknown>) => void }) {
-  // Sort robustly based entirely on connection instantiation indexed naturally by Go
+function LobbyView({
+  gameState,
+  isHost,
+  localPlayerId,
+  sendAction,
+}: {
+  gameState: GameState;
+  isHost: boolean;
+  localPlayerId: string;
+  sendAction: (type: string, payload?: Record<string, unknown>) => void;
+}) {
   const players = Object.values(gameState.Players).sort((a, b) => a.order - b.order);
-  const playersCount = players.length;
   const [newLocalName, setNewLocalName] = useState("");
 
   const handleAddLocalPlayer = () => {
@@ -138,52 +364,166 @@ function LobbyView({ gameState, isHost, localPlayerId, sendAction }: { gameState
   };
 
   return (
-    <div className="glass-panel w-full max-w-3xl p-8 flex flex-col h-fit">
-      <h2 className="text-3xl font-bold mb-6 text-center text-white">Lobby</h2>
+    <div style={{ ...cardStyle, maxWidth: 680 }}>
+      {/* Tape accents */}
+      <span className="corner-tape a" />
+      <span className="corner-tape b" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        {players.map((p) => (
-          <div key={p.id} className={`p-4 rounded-xl border flex items-center justify-between ${p.id === localPlayerId ? 'bg-white/10 border-white/30 shadow-[0_0_10px_rgba(255,255,255,0.1)]' : 'bg-white/5 border-white/10'}`}>
-            <span className={`font-semibold text-lg ${p.id === localPlayerId ? 'text-white' : ''}`}>
-              {p.name} {p.id === localPlayerId && <span className="text-[#9d00ff] ml-1 opacity-80 text-sm italic">(You)</span>} {p.isDead && "(LEFT)"}
-            </span>
-            {p.isHost && <span className="text-xs font-bold text-[#9d00ff] bg-[#9d00ff]/20 px-2 py-1 rounded-md">ADMIN</span>}
-          </div>
-        ))}
+      <div className={mono.className} style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 6 }}>
+        CASE STATUS · GATHERING PERSONNEL
+      </div>
+      <h2
+        className={kalam.className}
+        style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", marginBottom: 24, color: "#16161a" }}
+      >
+        Lobby
+      </h2>
+
+      {/* Player grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10, marginBottom: 24 }}>
+        {players.map((p, i) => {
+          const isMe = p.id === localPlayerId;
+          return (
+            <div
+              key={p.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 14px",
+                background: isMe ? "#fff8e6" : "#fafafa",
+                border: `1.5px solid ${isMe ? "#f0b429" : "#e9e9ee"}`,
+                borderLeft: `4px solid ${isMe ? "#f0b429" : "#e9e9ee"}`,
+                borderRadius: 3,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  className={mono.className}
+                  style={{ fontSize: 9, color: "#77788a" }}
+                >
+                  #{String(i + 1).padStart(2, "0")}
+                </span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>
+                  {p.name}
+                  {isMe && (
+                    <span
+                      className={mono.className}
+                      style={{ fontSize: 9, color: "#77788a", marginLeft: 6 }}
+                    >
+                      (YOU)
+                    </span>
+                  )}
+                  {p.isDead && (
+                    <span
+                      className={mono.className}
+                      style={{ fontSize: 9, color: "#e8433a", marginLeft: 6 }}
+                    >
+                      LEFT
+                    </span>
+                  )}
+                </span>
+              </div>
+              {p.isHost && (
+                <span
+                  className={mono.className}
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "0.5px",
+                    background: "#f0b429",
+                    color: "#16161a",
+                    padding: "2px 6px",
+                    borderRadius: 2,
+                    fontWeight: 700,
+                  }}
+                >
+                  HOST
+                </span>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Add local player input (hotseat) */}
         {gameState.IsSingleDevice && isHost && (
-          <div className="p-4 rounded-xl bg-black/40 border border-dashed border-white/20 flex items-center gap-2">
-            <input 
-              type="text" 
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "12px 14px",
+              border: "1.5px dashed #e9e9ee",
+              borderRadius: 3,
+              background: "#fafafa",
+            }}
+          >
+            <input
+              type="text"
               value={newLocalName}
               onChange={(e) => setNewLocalName(e.target.value)}
-              placeholder="Add local player..."
-              className="bg-transparent outline-none w-full text-white placeholder-white/30"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddLocalPlayer()}
+              placeholder="Add player..."
+              style={{
+                background: "transparent",
+                outline: "none",
+                border: "none",
+                width: "100%",
+                fontSize: 14,
+                color: "#16161a",
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleAddLocalPlayer()}
             />
-            <button onClick={handleAddLocalPlayer} className="text-[#9d00ff] font-bold text-sm uppercase">Add</button>
+            <button
+              onClick={handleAddLocalPlayer}
+              className={mono.className}
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.5px",
+                color: "#e8433a",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 700,
+                textTransform: "uppercase",
+              }}
+            >
+              ADD
+            </button>
           </div>
         )}
       </div>
 
-      <div className="mt-auto text-center border-t border-white/10 pt-6 flex flex-col gap-4">
+      {/* Actions */}
+      <div style={{ borderTop: "1px solid #e9e9ee", paddingTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
         {!isHost ? (
-          <p className="text-[#a0aec0] animate-pulse">Waiting for host to start the game...</p>
+          <p
+            className={mono.className}
+            style={{ textAlign: "center", fontSize: 12, color: "#77788a", letterSpacing: "0.5px" }}
+          >
+            Waiting for the host to start the game...
+          </p>
         ) : (
           <>
             <button
               onClick={() => sendAction("START")}
-              disabled={playersCount < 3}
-              className={`w-full py-4 text-xl font-bold rounded-xl transition-all ${
-                playersCount >= 3
-                  ? "bg-linear-to-br from-[#ff3b3b] to-[#d82b2b] text-white hover:-translate-y-1 shadow-[0_0_15px_rgba(255,59,59,0.3)]"
-                  : "bg-white/10 text-white/40 cursor-not-allowed border border-white/10"
-              }`}
+              disabled={players.length < 3}
+              style={{
+                ...btnPrimary,
+                background: players.length >= 3 ? "#e8433a" : "#e9e9ee",
+                borderColor: players.length >= 3 ? "#e8433a" : "#e9e9ee",
+                color: players.length >= 3 ? "#fff" : "#77788a",
+                boxShadow: players.length >= 3 ? "4px 4px 0 #16161a" : "none",
+                cursor: players.length >= 3 ? "pointer" : "not-allowed",
+              }}
+              className={space.className}
             >
-              {playersCount < 3 ? `Needs ${3 - playersCount} More Players` : "START GAME"}
+              {players.length < 3
+                ? `NEEDS ${3 - players.length} MORE PLAYER${3 - players.length > 1 ? "S" : ""}`
+                : "START GAME →"}
             </button>
             <button
               onClick={() => sendAction("CLOSE_ROOM")}
-              className="mt-2 text-sm font-semibold text-[#ff3b3b]/60 hover:text-[#ff3b3b] transition-colors uppercase tracking-widest"
+              className={mono.className}
+              style={btnGhost}
             >
               Terminate Room Permanently
             </button>
@@ -194,29 +534,78 @@ function LobbyView({ gameState, isHost, localPlayerId, sendAction }: { gameState
   );
 }
 
-function DiscussionView({ currentPlayer, isHost, sendAction }: { currentPlayer: Player | undefined; isHost: boolean; sendAction: (type: string) => void }) {
+// ─────────────────────────────────────────────
+// DISCUSSION VIEW
+// ─────────────────────────────────────────────
+function DiscussionView({
+  currentPlayer,
+  isHost,
+  sendAction,
+}: {
+  currentPlayer: Player | undefined;
+  isHost: boolean;
+  sendAction: (type: string) => void;
+}) {
   return (
-    <div className="glass-panel w-full max-w-3xl p-12 text-center flex flex-col justify-center border-l-4 border-l-[#ff3b3b]">
-      <h3 className="text-4xl font-extrabold mb-6 uppercase tracking-tight text-white">Live Discussion</h3>
-      <p className="text-[#a0aec0] mb-10 text-lg">Talk freely. Find the imposter. No time limit.</p>
+    <div
+      style={{
+        ...cardStyle,
+        borderLeft: "5px solid #e8433a",
+        textAlign: "center",
+        transform: "rotate(-0.4deg)",
+      }}
+    >
+      <span className="corner-tape a" />
+
+      <div
+        className={mono.className}
+        style={{ fontSize: 11, letterSpacing: "1px", color: "#e8433a", marginBottom: 12 }}
+      >
+        PHASE · LIVE DISCUSSION
+      </div>
+
+      <h2
+        className={kalam.className}
+        style={{ fontSize: "clamp(1.8rem,4.5vw,2.6rem)", marginBottom: 10, color: "#16161a" }}
+      >
+        Talk it out.
+      </h2>
+      <p style={{ color: "#77788a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
+        Find the imposter. No time limit — discuss freely.
+      </p>
 
       {currentPlayer?.isDead && (
-        <div className="mb-8 p-5 bg-[#ff3b3b]/10 text-[#ff3b3b] rounded-xl font-bold text-lg border border-[#ff3b3b]/20">
+        <div
+          className={mono.className}
+          style={{
+            marginBottom: 24,
+            padding: "12px 16px",
+            background: "#fff0ef",
+            border: "1px solid #e8433a",
+            fontSize: 12,
+            color: "#e8433a",
+            borderRadius: 3,
+          }}
+        >
           You are eliminated. You may not speak.
         </div>
       )}
 
       {isHost && (
-        <div className="flex flex-col mt-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <button
             onClick={() => sendAction("PROGRESS_VOTING")}
-            className="w-full max-w-md mx-auto py-5 bg-linear-to-br from-[#ff3b3b] to-[#d82b2b] text-white font-extrabold text-xl rounded-xl hover:-translate-y-1 transition-all shadow-[0_0_25px_rgba(255,59,59,0.3)]"
+            style={btnPrimary}
+            className={space.className}
           >
-            Move to Voting
+            MOVE TO VOTING →
           </button>
-          
-          <button onClick={() => sendAction("NEXT_ROUND")} className="mt-8 text-sm font-semibold text-white/30 hover:text-white transition-all uppercase tracking-widest">
-             Abort Round / Skip to Lobby
+          <button
+            onClick={() => sendAction("NEXT_ROUND")}
+            style={btnGhost}
+            className={mono.className}
+          >
+            Abort Round / Back to Lobby
           </button>
         </div>
       )}
@@ -224,48 +613,166 @@ function DiscussionView({ currentPlayer, isHost, sendAction }: { currentPlayer: 
   );
 }
 
-function ResultsView({ gameState, isHost, localPlayerId, sendAction }: { gameState: GameState; isHost: boolean; localPlayerId: string; sendAction: (type: string) => void }) {
+// ─────────────────────────────────────────────
+// RESULTS VIEW
+// ─────────────────────────────────────────────
+function ResultsView({
+  gameState,
+  isHost,
+  localPlayerId,
+  sendAction,
+}: {
+  gameState: GameState;
+  isHost: boolean;
+  localPlayerId: string;
+  sendAction: (type: string) => void;
+}) {
   const gameContinues = gameState.Winner === "NONE";
 
   return (
-    <div className="glass-panel w-full max-w-2xl p-10 text-center border border-white/10">
-      <h2 className="text-4xl font-extrabold mb-4 text-white uppercase tracking-tight">
-        {gameContinues ? "Round Complete" : "Game Over"}
-      </h2>
+    <div style={{ ...cardStyle, maxWidth: 580, transform: "rotate(0.5deg)" }}>
+      <span className="corner-tape a" />
+      <span className="corner-tape b" />
 
-      <div className="mb-8 text-xl font-medium">
-        Eliminated: <span className="text-[#ff3b3b] ml-2 font-black">{gameState.LastEliminated}</span>
+      <div
+        className={mono.className}
+        style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 12 }}
+      >
+        {gameContinues ? "ROUND COMPLETE" : "CASE CLOSED"}
       </div>
 
+      <h2
+        className={kalam.className}
+        style={{ fontSize: "clamp(1.8rem,4vw,2.4rem)", marginBottom: 20, color: "#16161a" }}
+      >
+        {gameContinues ? "Round Over." : "Game Over."}
+      </h2>
+
+      {/* Eliminated player */}
+      <div
+        style={{
+          padding: "14px 16px",
+          background: "#fff0ef",
+          border: "1.5px solid #e8433a",
+          borderRadius: 3,
+          marginBottom: 20,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span className={mono.className} style={{ fontSize: 11, color: "#e8433a" }}>
+          ELIMINATED
+        </span>
+        <span style={{ fontWeight: 700, fontSize: 16, color: "#16161a" }}>
+          {gameState.LastEliminated}
+        </span>
+      </div>
+
+      {/* Winner banner */}
       {!gameContinues && (
-        <div className="p-8 bg-[#0a0e17] rounded-3xl mb-10 border border-[#9d00ff]/30">
-          <h3 className={`text-4xl font-black mb-3 ${gameState.Winner === "CREW" ? "text-green-400" : "text-[#ff3b3b]"}`}>
+        <div
+          style={{
+            padding: "20px 16px",
+            background: gameState.Winner === "CREW" ? "#edf9f2" : "#fff0ef",
+            border: `1.5px solid ${gameState.Winner === "CREW" ? "#22a866" : "#e8433a"}`,
+            borderRadius: 3,
+            textAlign: "center",
+            marginBottom: 24,
+          }}
+        >
+          <span
+            className={kalam.className}
+            style={{
+              fontSize: "2rem",
+              fontWeight: 700,
+              color: gameState.Winner === "CREW" ? "#22a866" : "#e8433a",
+            }}
+          >
             {gameState.Winner} WINS
-          </h3>
+          </span>
         </div>
       )}
 
-      <div className="flex flex-col gap-4 text-left mb-10">
-        <h4 className="text-[#a0aec0] text-sm uppercase tracking-widest font-bold">Standings</h4>
-        {Object.values(gameState.Players)
-          .sort((a, b) => b.score - a.score)
-          .map((p) => (
-            <div key={p.id} className={`p-5 border rounded-xl flex justify-between items-center ${p.id === localPlayerId ? 'bg-white/10 border-white/30' : 'bg-white/5 border-white/10'}`}>
-              <span className={`font-bold text-xl ${p.isDead ? "line-through text-white/30" : "text-white"}`}>
-                {p.name} {p.id === localPlayerId && <span className="text-[#9d00ff] ml-2 opacity-80 text-sm italic">(You)</span>}
-                {p.isDead && <span className="text-xs uppercase ml-2 text-[#ff3b3b] border border-[#ff3b3b]/30 px-2 py-1 rounded-md">Out</span>}
-              </span>
-              <span className="text-[#9d00ff] font-bold text-xl">{p.score} pts</span>
-            </div>
-          ))}
+      {/* Scoreboard */}
+      <div style={{ marginBottom: 24 }}>
+        <p
+          className={mono.className}
+          style={{ fontSize: 10, letterSpacing: "1px", color: "#77788a", marginBottom: 10 }}
+        >
+          STANDINGS
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {Object.values(gameState.Players)
+            .sort((a, b) => b.score - a.score)
+            .map((p, i) => {
+              const isMe = p.id === localPlayerId;
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 14px",
+                    background: isMe ? "#fff8e6" : "#fafafa",
+                    border: `1.5px solid ${isMe ? "#f0b429" : "#e9e9ee"}`,
+                    borderRadius: 3,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span
+                      className={mono.className}
+                      style={{ fontSize: 9, color: "#77788a", minWidth: 20 }}
+                    >
+                      #{i + 1}
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: p.isDead ? "#77788a" : "#16161a",
+                        textDecoration: p.isDead ? "line-through" : "none",
+                      }}
+                    >
+                      {p.name}
+                      {isMe && (
+                        <span className={mono.className} style={{ fontSize: 9, color: "#77788a", marginLeft: 6 }}>
+                          (YOU)
+                        </span>
+                      )}
+                    </span>
+                    {p.isDead && (
+                      <span
+                        className={mono.className}
+                        style={{
+                          fontSize: 9,
+                          color: "#e8433a",
+                          border: "1px solid #e8433a",
+                          padding: "1px 5px",
+                          borderRadius: 2,
+                        }}
+                      >
+                        OUT
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontWeight: 700, color: "#8c5cd8", fontSize: 15 }}>
+                    {p.score} pts
+                  </span>
+                </div>
+              );
+            })}
+        </div>
       </div>
 
       {isHost && (
         <button
           onClick={() => sendAction(gameContinues ? "CONTINUE_DISCUSSION" : "NEXT_ROUND")}
-          className="w-full max-w-sm mx-auto py-5 text-xl bg-linear-to-br from-[#9d00ff] to-[#6a00ff] text-white font-extrabold rounded-2xl hover:-translate-y-1 transition-all shadow-[0_0_20px_rgba(157,0,255,0.4)]"
+          style={btnPrimary}
+          className={space.className}
         >
-          {gameContinues ? "Resume Discussion" : "New Round"}
+          {gameContinues ? "RESUME DISCUSSION →" : "NEW ROUND →"}
         </button>
       )}
     </div>
@@ -273,207 +780,433 @@ function ResultsView({ gameState, isHost, localPlayerId, sendAction }: { gameSta
 }
 
 // ─────────────────────────────────────────────
-// Multi-Device Specific Views
+// MULTI-DEVICE: REVEAL VIEW
 // ─────────────────────────────────────────────
-
-function RevealView({ currentPlayer, isHost, sendAction }: { currentPlayer: Player | undefined; isHost: boolean; sendAction: (type: string) => void }) {
+function RevealView({
+  currentPlayer,
+  isHost,
+  sendAction,
+}: {
+  currentPlayer: Player | undefined;
+  isHost: boolean;
+  sendAction: (type: string) => void;
+}) {
   if (!currentPlayer) return null;
 
   return (
-    <div className="glass-panel w-full max-w-2xl p-10 text-center h-fit border border-[#9d00ff]/20">
-      <h2 className="text-4xl font-extrabold mb-8 uppercase tracking-widest text-[#a0aec0]">Your Secret Word</h2>
+    <div style={{ ...cardStyle, textAlign: "center", transform: "rotate(-0.5deg)" }}>
+      <span className="corner-tape a" />
+      <span className="corner-tape b" />
+
+      <div
+        className={mono.className}
+        style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 16 }}
+      >
+        EYES ONLY · YOUR SECRET WORD
+      </div>
 
       {!currentPlayer.isReady ? (
-        <div className="flex flex-col items-center gap-8">
-          <div className="p-10 bg-[#0a0e17] rounded-3xl w-full border border-white/5">
-            <span className="text-5xl font-black tracking-widest text-[#ff3b3b] drop-shadow-[0_0_15px_rgba(255,59,59,0.5)]">
+        <>
+          <div
+            style={{
+              padding: "30px 20px",
+              background: "#fafafa",
+              border: "1.5px solid #e9e9ee",
+              marginBottom: 24,
+              borderRadius: 3,
+            }}
+          >
+            <span
+              className={kalam.className}
+              style={{ fontSize: "clamp(2.2rem,8vw,3.5rem)", fontWeight: 700, color: "#e8433a" }}
+            >
               {currentPlayer.Word ?? "—"}
             </span>
           </div>
-          <button
-            onClick={() => sendAction("MARK_READY")}
-            className="w-full max-w-xs py-5 bg-linear-to-br from-[#9d00ff] to-[#6a00ff] text-white text-xl font-bold rounded-xl hover:-translate-y-1 transition-all shadow-[0_0_20px_rgba(157,0,255,0.4)]"
-          >
-            I Memorized It ✓
+          <button onClick={() => sendAction("MARK_READY")} style={btnPrimary} className={space.className}>
+            I MEMORIZED IT ✓
           </button>
-        </div>
+        </>
       ) : (
-        <div className="text-xl text-[#a0aec0] animate-pulse font-medium py-10">
+        <p
+          className={mono.className}
+          style={{ fontSize: 13, color: "#77788a", padding: "30px 0", letterSpacing: "0.5px" }}
+        >
           Waiting for all players to confirm...
-        </div>
+        </p>
       )}
 
       {isHost && (
-        <button onClick={() => sendAction("NEXT_ROUND")} className="mt-8 text-sm font-semibold text-white/30 hover:text-white transition-all uppercase tracking-widest">
-           Abort Round / Skip to Lobby
+        <button
+          onClick={() => sendAction("NEXT_ROUND")}
+          style={{ ...btnGhost, marginTop: 20 }}
+          className={mono.className}
+        >
+          Abort Round / Back to Lobby
         </button>
       )}
     </div>
   );
 }
 
-function VotingView({ gameState, currentPlayer, isHost, sendAction }: { gameState: GameState; currentPlayer: Player | undefined; isHost: boolean; sendAction: (type: string, payload?: Record<string, unknown>) => void }) {
+// ─────────────────────────────────────────────
+// MULTI-DEVICE: VOTING VIEW
+// ─────────────────────────────────────────────
+function VotingView({
+  gameState,
+  currentPlayer,
+  isHost,
+  sendAction,
+}: {
+  gameState: GameState;
+  currentPlayer: Player | undefined;
+  isHost: boolean;
+  sendAction: (type: string, payload?: Record<string, unknown>) => void;
+}) {
   const [selectedId, setSelectedId] = useState<string>("");
 
-  if (currentPlayer?.isDead) return <div className="glass-panel p-12 text-[#a0aec0] text-2xl font-bold text-center">You are eliminated. The survivors are voting.</div>;
-
-  return (
-    <div className="glass-panel w-full max-w-3xl p-10">
-      <h2 className="text-4xl font-extrabold mb-10 text-center text-[#ff3b3b] uppercase tracking-tight">Cast Your Vote</h2>
-
-      {currentPlayer?.hasVoted ? (
-        <div className="text-center p-12 bg-[#0a0e17]/80 border border-white/5 rounded-2xl">
-          <p className="text-3xl font-extrabold text-white mb-4">Vote Locked In</p>
-          <p className="text-[#a0aec0] text-lg animate-pulse">Waiting for everyone to vote...</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.values(gameState.Players).sort((a,b) => a.order - b.order).map((p) => {
-              if (p.id === currentPlayer?.id || p.isDead) return null;
-              const isSelected = selectedId === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedId(p.id)}
-                  className={`p-6 rounded-xl transition-all border-2 text-left ${isSelected ? "bg-[#ff3b3b]/10 border-[#ff3b3b] shadow-[0_0_15px_rgba(255,59,59,0.3)] -translate-y-1" : "bg-white/5 border-white/5 hover:border-white/20"}`}
-                >
-                  <span className={`text-2xl font-bold ${isSelected ? "text-white" : "text-[#a0aec0]"}`}>{p.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => sendAction("CAST_VOTE", { targetId: selectedId })}
-            disabled={!selectedId}
-            className={`w-full max-w-md mx-auto py-5 text-xl font-extrabold rounded-xl transition-all ${selectedId ? "bg-linear-to-br from-[#ff3b3b] to-[#d82b2b] text-white hover:-translate-y-1 shadow-[0_0_20px_rgba(255,59,59,0.5)]" : "bg-transparent border-2 border-white/10 text-white/30 cursor-not-allowed"}`}
-          >
-            Confirm Elimination
-          </button>
-        </div>
-      )}
-
-      {isHost && (
-        <div className="text-center mt-12">
-          <button onClick={() => sendAction("NEXT_ROUND")} className="text-sm font-semibold text-white/30 hover:text-white transition-all uppercase tracking-widest">
-            Abort Round / Skip to Lobby
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Single-Device / Hotseat Specific Views
-// ─────────────────────────────────────────────
-
-function RevealViewSingleDevice({ gameState, isHost, sendAction }: { gameState: GameState; isHost: boolean; sendAction: (type: string) => void }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showWord, setShowWord] = useState(false);
-  
-  // Sort players flawlessly based on insertion chronological order
-  const activePlayers = Object.values(gameState.Players).sort((a, b) => a.order - b.order).filter(p => !p.isDead);
-  const currentSeat = activePlayers[currentIndex];
-
-  if (!currentSeat) {
+  if (currentPlayer?.isDead) {
     return (
-      <div className="glass-panel w-full max-w-2xl p-10 text-center border border-[#9d00ff]/20">
-         <h2 className="text-3xl font-extrabold mb-8 text-white">All Players Initialized</h2>
-         {isHost && (
-            <button onClick={() => sendAction("CONTINUE_DISCUSSION")} className="w-full max-w-xs py-5 bg-linear-to-br from-[#9d00ff] to-[#6a00ff] text-white text-xl font-bold rounded-xl shadow-[0_0_20px_rgba(157,0,255,0.4)] hover:-translate-y-1 transition-all">
-              Begin Discussion
-            </button>
-         )}
+      <div style={{ ...cardStyle, textAlign: "center" }}>
+        <p
+          className={kalam.className}
+          style={{ fontSize: "1.8rem", color: "#77788a" }}
+        >
+          You are eliminated. The survivors are voting.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="glass-panel w-full max-w-2xl p-10 text-center h-fit border border-[#9d00ff]/20">
-      <h3 className="text-[#a0aec0] font-bold uppercase tracking-widest mb-2">HOTSEAT HANDOFF</h3>
-      <h2 className="text-4xl font-extrabold mb-8 text-white">Pass the device to <span className="text-[#9d00ff]">{currentSeat.name}</span></h2>
+    <div style={{ ...cardStyle, transform: "rotate(0.3deg)" }}>
+      <span className="corner-tape a" />
 
-      <div className="flex flex-col items-center gap-8">
-        <div className="p-10 bg-[#0a0e17] rounded-3xl w-full border border-white/5 relative overflow-hidden group">
-          {showWord ? (
-            <span className="text-6xl font-black tracking-widest text-[#ff3b3b] drop-shadow-[0_0_15px_rgba(255,59,59,0.5)] fade-in">
-              {currentSeat.Word ?? "—"}
-            </span>
-          ) : (
-            <div className="text-[#a0aec0] italic text-lg py-4">Word securely hidden</div>
-          )}
+      <div
+        className={mono.className}
+        style={{ fontSize: 11, letterSpacing: "1px", color: "#e8433a", marginBottom: 16 }}
+      >
+        PHASE · CAST YOUR VOTE
+      </div>
+      <h2
+        className={kalam.className}
+        style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", marginBottom: 20, color: "#16161a" }}
+      >
+        Who&apos;s the imposter?
+      </h2>
+
+      {currentPlayer?.hasVoted ? (
+        <div
+          style={{
+            padding: "32px 20px",
+            background: "#fafafa",
+            border: "1.5px solid #e9e9ee",
+            textAlign: "center",
+            borderRadius: 3,
+          }}
+        >
+          <p style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Vote locked in.</p>
+          <p
+            className={mono.className}
+            style={{ fontSize: 12, color: "#77788a" }}
+          >
+            Waiting for everyone to vote...
+          </p>
         </div>
-        
-        {showWord ? (
-          <button
-            onClick={() => { setShowWord(false); setCurrentIndex(c => c + 1); }}
-            className="w-full max-w-xs py-5 bg-linear-to-br from-[#9d00ff] to-[#6a00ff] text-white text-xl font-bold rounded-xl hover:-translate-y-1 shadow-[0_0_20px_rgba(157,0,255,0.4)] transition-all"
+      ) : (
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))",
+              gap: 10,
+              marginBottom: 20,
+            }}
           >
-            I Memorized It ✓
+            {Object.values(gameState.Players)
+              .sort((a, b) => a.order - b.order)
+              .map((p) => {
+                if (p.id === currentPlayer?.id || p.isDead) return null;
+                const isSelected = selectedId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedId(p.id)}
+                    style={{
+                      padding: "14px 12px",
+                      background: isSelected ? "#fff0ef" : "#fafafa",
+                      border: `1.5px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
+                      borderLeft: `4px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontWeight: 600,
+                      fontSize: 15,
+                      color: isSelected ? "#e8433a" : "#16161a",
+                      transition: "all .15s",
+                      transform: isSelected ? "translateY(-2px)" : "none",
+                    }}
+                    className={space.className}
+                  >
+                    {p.name}
+                  </button>
+                );
+              })}
+          </div>
+
+          <button
+            onClick={() => sendAction("CAST_VOTE", { targetId: selectedId })}
+            disabled={!selectedId}
+            style={{
+              ...btnPrimary,
+              background: selectedId ? "#e8433a" : "#e9e9ee",
+              borderColor: selectedId ? "#e8433a" : "#e9e9ee",
+              color: selectedId ? "#fff" : "#77788a",
+              boxShadow: selectedId ? "4px 4px 0 #16161a" : "none",
+              cursor: selectedId ? "pointer" : "not-allowed",
+            }}
+            className={space.className}
+          >
+            CONFIRM ELIMINATION
           </button>
-        ) : (
+        </>
+      )}
+
+      {isHost && (
+        <div style={{ textAlign: "center", marginTop: 20 }}>
           <button
-            onClick={() => setShowWord(true)}
-            className="w-full max-w-xs py-5 bg-[#121826] border border-[#ff3b3b]/30 text-[#ff3b3b] text-xl font-bold rounded-xl hover:bg-[#ff3b3b]/10 transition-all"
+            onClick={() => sendAction("NEXT_ROUND")}
+            style={btnGhost}
+            className={mono.className}
           >
-            Tap when ready
+            Abort Round / Back to Lobby
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// HOTSEAT: REVEAL VIEW
+// ─────────────────────────────────────────────
+function RevealViewSingleDevice({
+  gameState,
+  isHost,
+  sendAction,
+}: {
+  gameState: GameState;
+  isHost: boolean;
+  sendAction: (type: string) => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showWord, setShowWord] = useState(false);
+
+  const activePlayers = Object.values(gameState.Players)
+    .sort((a, b) => a.order - b.order)
+    .filter((p) => !p.isDead);
+  const currentSeat = activePlayers[currentIndex];
+
+  if (!currentSeat) {
+    return (
+      <div style={{ ...cardStyle, textAlign: "center" }}>
+        <span className="corner-tape a" />
+        <h2
+          className={kalam.className}
+          style={{ fontSize: "1.8rem", marginBottom: 24, color: "#16161a" }}
+        >
+          All players initialized.
+        </h2>
+        {isHost && (
+          <button onClick={() => sendAction("CONTINUE_DISCUSSION")} style={btnPrimary} className={space.className}>
+            BEGIN DISCUSSION →
           </button>
         )}
       </div>
+    );
+  }
+
+  return (
+    <div style={{ ...cardStyle, textAlign: "center", transform: "rotate(-0.6deg)" }}>
+      <span className="corner-tape a" />
+      <span className="corner-tape b" />
+
+      <div
+        className={mono.className}
+        style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 8 }}
+      >
+        HOTSEAT HANDOFF
+      </div>
+      <h2
+        className={kalam.className}
+        style={{ fontSize: "clamp(1.4rem,4vw,2rem)", marginBottom: 24, color: "#16161a" }}
+      >
+        Pass the device to{" "}
+        <span style={{ color: "#8c5cd8" }}>{currentSeat.name}</span>
+      </h2>
+
+      {/* Word box */}
+      <div
+        style={{
+          padding: "28px 20px",
+          background: "#fafafa",
+          border: "1.5px solid #e9e9ee",
+          marginBottom: 20,
+          borderRadius: 3,
+          minHeight: 90,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {showWord ? (
+          <span
+            className={kalam.className}
+            style={{ fontSize: "clamp(2rem,7vw,3rem)", fontWeight: 700, color: "#e8433a" }}
+          >
+            {currentSeat.Word ?? "—"}
+          </span>
+        ) : (
+          <span
+            className={mono.className}
+            style={{ fontSize: 13, color: "#77788a", fontStyle: "italic" }}
+          >
+            Word securely hidden
+          </span>
+        )}
+      </div>
+
+      {showWord ? (
+        <button
+          onClick={() => { setShowWord(false); setCurrentIndex((c) => c + 1); }}
+          style={btnPrimary}
+          className={space.className}
+        >
+          I MEMORIZED IT ✓ — NEXT PLAYER
+        </button>
+      ) : (
+        <button
+          onClick={() => setShowWord(true)}
+          style={btnSecondary}
+          className={space.className}
+        >
+          TAP WHEN READY
+        </button>
+      )}
 
       {isHost && (
-        <button onClick={() => sendAction("NEXT_ROUND")} className="mt-8 text-sm font-semibold text-white/30 hover:text-white transition-all uppercase tracking-widest">
-           Abort Round / Skip to Lobby
+        <button
+          onClick={() => sendAction("NEXT_ROUND")}
+          style={{ ...btnGhost, marginTop: 20 }}
+          className={mono.className}
+        >
+          Abort Round / Back to Lobby
         </button>
       )}
     </div>
   );
 }
 
-function VotingViewSingleDevice({ gameState, isHost, sendAction }: { gameState: GameState; isHost: boolean; sendAction: (type: string, payload?: Record<string, unknown>) => void }) {
+// ─────────────────────────────────────────────
+// HOTSEAT: VOTING VIEW
+// ─────────────────────────────────────────────
+function VotingViewSingleDevice({
+  gameState,
+  isHost,
+  sendAction,
+}: {
+  gameState: GameState;
+  isHost: boolean;
+  sendAction: (type: string, payload?: Record<string, unknown>) => void;
+}) {
   const [selectedId, setSelectedId] = useState<string>("");
 
   return (
-    <div className="glass-panel w-full max-w-3xl p-10 border border-[#ff3b3b]/30 shadow-[0_0_30px_rgba(255,59,59,0.15)]">
-      <h2 className="text-4xl font-extrabold mb-4 text-center text-[#ff3b3b] uppercase tracking-tight">Public Consensus Vote</h2>
-      <p className="text-center text-[#a0aec0] mb-8 font-medium">Discuss out loud. Admin executes the group&apos;s final decision.</p>
+    <div style={{ ...cardStyle, borderLeft: "5px solid #e8433a", transform: "rotate(0.3deg)" }}>
+      <span className="corner-tape a" />
 
-      <div className="flex flex-col gap-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.values(gameState.Players).sort((a,b) => a.order - b.order).map((p) => {
+      <div
+        className={mono.className}
+        style={{ fontSize: 11, letterSpacing: "1px", color: "#e8433a", marginBottom: 16 }}
+      >
+        PHASE · PUBLIC CONSENSUS VOTE
+      </div>
+      <h2
+        className={kalam.className}
+        style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", marginBottom: 8, color: "#16161a" }}
+      >
+        Who&apos;s the imposter?
+      </h2>
+      <p style={{ fontSize: 14, color: "#77788a", marginBottom: 20 }}>
+        Discuss out loud. Admin executes the group&apos;s final decision.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))",
+          gap: 10,
+          marginBottom: 20,
+        }}
+      >
+        {Object.values(gameState.Players)
+          .sort((a, b) => a.order - b.order)
+          .map((p) => {
             if (p.isDead) return null;
             const isSelected = selectedId === p.id;
             return (
               <button
                 key={p.id}
                 onClick={() => setSelectedId(p.id)}
-                className={`p-6 rounded-xl transition-all border-2 text-left ${isSelected ? "bg-[#ff3b3b]/10 border-[#ff3b3b] shadow-[0_0_15px_rgba(255,59,59,0.3)] -translate-y-1" : "bg-[#0a0e17] border-white/5 hover:border-white/20"}`}
+                style={{
+                  padding: "14px 12px",
+                  background: isSelected ? "#fff0ef" : "#fafafa",
+                  border: `1.5px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
+                  borderLeft: `4px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
+                  borderRadius: 3,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontWeight: 600,
+                  fontSize: 15,
+                  color: isSelected ? "#e8433a" : "#16161a",
+                  transition: "all .15s",
+                  transform: isSelected ? "translateY(-2px)" : "none",
+                }}
+                className={space.className}
               >
-                <span className={`text-2xl font-bold ${isSelected ? "text-white" : "text-[#a0aec0]"}`}>{p.name}</span>
+                {p.name}
               </button>
             );
           })}
-        </div>
-
-        {isHost && (
-           <button
-             onClick={() => sendAction("FORCE_ELIMINATE", { targetId: selectedId })}
-             disabled={!selectedId}
-             className={`w-full max-w-md mx-auto py-5 text-xl font-extrabold rounded-xl transition-all ${selectedId ? "bg-linear-to-br from-[#ff3b3b] to-[#d82b2b] text-white shadow-[0_0_20px_rgba(255,59,59,0.5)] hover:-translate-y-1" : "bg-transparent border border-white/10 text-white/30 cursor-not-allowed"}`}
-           >
-             Execute Selected Target
-           </button>
-        )}
       </div>
-      
+
       {isHost && (
-        <div className="text-center mt-12">
-          <button onClick={() => sendAction("NEXT_ROUND")} className="text-sm font-semibold text-white/30 hover:text-white transition-all uppercase tracking-widest">
-            Abort Round / Skip to Lobby
+        <>
+          <button
+            onClick={() => sendAction("FORCE_ELIMINATE", { targetId: selectedId })}
+            disabled={!selectedId}
+            style={{
+              ...btnPrimary,
+              background: selectedId ? "#e8433a" : "#e9e9ee",
+              borderColor: selectedId ? "#e8433a" : "#e9e9ee",
+              color: selectedId ? "#fff" : "#77788a",
+              boxShadow: selectedId ? "4px 4px 0 #16161a" : "none",
+              cursor: selectedId ? "pointer" : "not-allowed",
+            }}
+            className={space.className}
+          >
+            EXECUTE SELECTED TARGET
           </button>
-        </div>
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <button
+              onClick={() => sendAction("NEXT_ROUND")}
+              style={btnGhost}
+              className={mono.className}
+            >
+              Abort Round / Back to Lobby
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

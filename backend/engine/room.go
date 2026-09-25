@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -10,8 +11,19 @@ func (r *Room) AddPlayer(playerID, name string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
+	normalizedName := strings.ReplaceAll(strings.ToLower(name), " ", "")
+
 	// Reconnect case: player re-joins with same ID (e.g. page refresh)
 	if player, exists := r.Players[playerID]; exists {
+		// Prevent taking someone else's name even on reconnect
+		for existingID, p := range r.Players {
+			if existingID != playerID {
+				existingNormalized := strings.ReplaceAll(strings.ToLower(p.Name), " ", "")
+				if normalizedName == existingNormalized {
+					return errors.New("name already taken by another player")
+				}
+			}
+		}
 		player.Name = name
 		r.LastActivity = time.Now()
 		return nil
@@ -19,6 +31,14 @@ func (r *Room) AddPlayer(playerID, name string) error {
 
 	if r.Phase != PhaseLobby {
 		return errors.New("cannot join a match that is already in progress")
+	}
+
+	// Prevent duplicate names for new players
+	for _, p := range r.Players {
+		existingNormalized := strings.ReplaceAll(strings.ToLower(p.Name), " ", "")
+		if normalizedName == existingNormalized {
+			return errors.New("name already taken by another player")
+		}
 	}
 
 	isHost := len(r.Players) == 0

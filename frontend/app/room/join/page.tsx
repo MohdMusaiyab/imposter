@@ -3,6 +3,11 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
+
+const space = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"] });
+const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
+const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export default function JoinRoom() {
   const router = useRouter();
@@ -12,68 +17,185 @@ export default function JoinRoom() {
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!playerName.trim() || !roomCode.trim()) return;
-    
+
     const formattedCode = roomCode.trim().toUpperCase();
     const sessionData = {
       playerId: crypto.randomUUID(),
       name: playerName.trim(),
       roomId: formattedCode,
-      expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
     };
     localStorage.setItem("imposter_session", JSON.stringify(sessionData));
-    
     router.push(`/room/${formattedCode}`);
   };
 
+  const fieldStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "12px 14px",
+    fontSize: 15,
+    fontFamily: "inherit",
+    background: "#fafafa",
+    border: "1.5px solid #e9e9ee",
+    outline: "none",
+    borderRadius: 3,
+    color: "#16161a",
+    transition: "border-color .2s",
+    letterSpacing: "0.5px",
+  };
+
   return (
-    <main className="w-full max-w-7xl mx-auto px-6 relative flex flex-col items-center justify-center min-h-screen">
-      <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute -top-10 -right-5 w-[400px] h-[400px] bg-[#ff3b3b]/20 blur-[60px] rounded-full opacity-50"></div>
-        <div className="absolute -bottom-10 -left-5 w-[500px] h-[500px] bg-[#9d00ff]/20 blur-[60px] rounded-full opacity-50"></div>
+    <div
+      className={`board ${space.className}`}
+      style={{ minHeight: "100svh", display: "flex", flexDirection: "column" }}
+    >
+      <div className="board-lines" />
+
+      <nav className="nav">
+        <div className="logo">
+          <span className={`badge-icon ${mono.className}`}>3</span>
+          IMPOSTER
+        </div>
+        <Link href="/" className={`nav-cta ${mono.className}`}>
+          ← HOME
+        </Link>
+      </nav>
+
+      <div className={`apb-tag ${mono.className}`}>
+        <span className="dot" />
+        FIELD AGENT ENTRY — REPORT TO YOUR CASE
       </div>
 
-      <div className="glass-panel animate-float w-full max-w-xl p-8 md:p-12 text-center relative z-10">
-        <h1 className="text-4xl font-extrabold mb-2 text-white">Join <span className="text-[#ff3b3b] drop-shadow-[0_0_20px_rgba(255,59,59,0.4)]">Room</span></h1>
-        <p className="text-[#a0aec0] mb-8 text-lg">Enter a code to join your friends.</p>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 20px 60px",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "480px",
+            background: "#fff",
+            border: "1.5px solid #16161a",
+            padding: "36px 32px 32px",
+            boxShadow: "6px 8px 0 #e9e9ee",
+            transform: "rotate(0.5deg)",
+          }}
+        >
+          <span className="corner-tape a" />
+          <span className="corner-tape b" />
 
-        <form onSubmit={handleJoin} className="flex flex-col gap-6 text-left">
-          
-          <div>
-            <label className="block mb-2 text-[#a0aec0] font-medium">Room Code (or ID)</label>
-            <input 
-              type="text" 
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              placeholder="e.g. XYZ123" 
-              required
-              maxLength={10}
-              className="w-full px-6 py-4 text-lg bg-[#121826]/80 border border-white/10 rounded-xl text-white outline-none transition-all focus:border-[#ff3b3b] focus:shadow-[0_0_15px_rgba(255,59,59,0.3)] placeholder-white/30"
-            />
+          <div className={`case-num ${mono.className}`} style={{ marginBottom: 20 }}>
+            FORM B-1 · JOIN ROOM
           </div>
 
-          <div>
-            <label className="block mb-2 text-[#a0aec0] font-medium">Your Name</label>
-            <input 
-              type="text" 
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="e.g. Maverick" 
-              required
-              className="w-full px-6 py-4 text-lg bg-[#121826]/80 border border-white/10 rounded-xl text-white outline-none transition-all focus:border-[#ff3b3b] focus:shadow-[0_0_15px_rgba(255,59,59,0.3)] placeholder-white/30"
-            />
+          <h1
+            className={kalam.className}
+            style={{ fontSize: "clamp(1.7rem, 5vw, 2.4rem)", marginBottom: 6, lineHeight: 1.2 }}
+          >
+            Report to Your Case
+          </h1>
+          <p
+            className={mono.className}
+            style={{ fontSize: 13, color: "#77788a", marginBottom: 28 }}
+          >
+            Enter the case code and your alias to join your squad.
+          </p>
+
+          <form onSubmit={handleJoin} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div>
+              <label
+                className={mono.className}
+                style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
+              >
+                CASE CODE
+              </label>
+              <input
+                type="text"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                placeholder="e.g. XYZ123"
+                required
+                maxLength={10}
+                style={{ ...fieldStyle, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "3px", fontSize: 18 }}
+                onFocus={(e) => (e.target.style.borderColor = "#e8433a")}
+                onBlur={(e) => (e.target.style.borderColor = "#e9e9ee")}
+              />
+            </div>
+
+            <div>
+              <label
+                className={mono.className}
+                style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
+              >
+                YOUR ALIAS
+              </label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="e.g. Maverick"
+                required
+                style={fieldStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#e8433a")}
+                onBlur={(e) => (e.target.style.borderColor = "#e9e9ee")}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className={space.className}
+              style={{
+                marginTop: 8,
+                padding: "15px 28px",
+                fontSize: 15,
+                fontWeight: 700,
+                background: "#e8433a",
+                color: "#fff",
+                border: "1.5px solid #e8433a",
+                boxShadow: "4px 4px 0 #16161a",
+                borderRadius: 3,
+                cursor: "pointer",
+                transition: "all .18s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = "translate(-2px,-2px)";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "6px 6px 0 #16161a";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = "";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "4px 4px 0 #16161a";
+              }}
+            >
+              ENTER THE ROOM →
+            </button>
+          </form>
+
+          {/* Divider + create link */}
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid #e9e9ee", textAlign: "center" }}>
+            <span className={mono.className} style={{ fontSize: 11, color: "#77788a" }}>
+              DON&apos;T HAVE A CODE?{" "}
+            </span>
+            <Link
+              href="/room/create"
+              className={mono.className}
+              style={{
+                fontSize: 11,
+                color: "#e8433a",
+                borderBottom: "1px solid #e8433a",
+                paddingBottom: 1,
+                letterSpacing: "0.5px",
+              }}
+            >
+              OPEN A NEW CASE
+            </Link>
           </div>
-
-          <button type="submit" className="mt-4 w-full py-4 text-xl font-semibold rounded-xl text-white bg-gradient-to-br from-[#ff3b3b] to-[#d82b2b] hover:from-[#ff4c4c] hover:to-[#e03232] transition-all hover:-translate-y-1 shadow-[0_0_15px_rgba(255,59,59,0.4)] hover:shadow-[0_10px_25px_-5px_rgba(255,59,59,0.6)]">
-            Join Game
-          </button>
-        </form>
-
-        <div className="mt-8">
-          <Link href="/" className="text-[#a0aec0] hover:text-white transition-colors border-b border-[#a0aec0] hover:border-white pb-1">
-            Back to Home
-          </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
