@@ -45,9 +45,9 @@ func InitDB() error {
 		return fmt.Errorf("failed to migrate tables: %v", err)
 	}
 
-	// 3. Seed default word pairs if the dictionary is empty
-	SeedDatabase(DB)
-
+	// Note: AutoMigrate safely maintains column structure without modifying existing data.
+	// We no longer call SeedDatabase(DB) here since you are managing Word dictionaries 
+	// externally via your custom CLI seed scripts!
 	log.Println("✅ Successfully connected & synced with Neon PostgreSQL via GORM")
 	return nil
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-// Defining exact UI interfaces that map back to the Go Engine struct
 export interface Player {
   id: string;
   name: string;
@@ -31,10 +30,7 @@ export function useGameSocket(roomId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Natively holding the active connection to prevent memory leaks
   const socketRef = useRef<WebSocket | null>(null);
-
-  // Track attempts to accurately space out exponential backoff spikes
   const reconnectAttempts = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -43,9 +39,7 @@ export function useGameSocket(roomId: string | null) {
 
     let isMounted = true;
 
-    // Wrap the pipeline in a functional block to allow recursive backoff loops
     const connect = () => {
-      // 1. Retrieve the localized credentials securely
       const sessionStr = localStorage.getItem("imposter_session");
       if (!sessionStr) {
         if (isMounted) setError("No valid game session found. Please return to the homepage.");
@@ -54,9 +48,6 @@ export function useGameSocket(roomId: string | null) {
 
       const session = JSON.parse(sessionStr);
 
-      // 2. Safely initiate duplex connection to Go Engine
-      // If we are playing locally, dynamically bind to local network. 
-      // If deployed on Vercel, securely bind to the Render production server.
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
       const wsBaseUrl = isLocal ? `ws://${window.location.hostname}:9999` : 'wss://imposter-54yr.onrender.com';
       
@@ -71,11 +62,9 @@ export function useGameSocket(roomId: string | null) {
         }
         setIsConnected(true);
         setError(null);
-        // Reset the exponential backoff counter upon a healthy connection!
         reconnectAttempts.current = 0;
       };
 
-      // 3. Listen to all background syncs pushed by Go natively
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -85,11 +74,9 @@ export function useGameSocket(roomId: string | null) {
             return;
           }
 
-          // Accurately map the struct over depending on how the handler bundled it
           if (data.type === "ROOM_STATE") {
             setGameState(data.payload);
           } else if (data.ID) {
-            // Fallback if pushed root object
             setGameState(data);
           }
         } catch (err) {
@@ -99,9 +86,6 @@ export function useGameSocket(roomId: string | null) {
 
       ws.onerror = (err) => {
         console.error("WebSocket network error:", err);
-        // We do NOT set state here because standard architecture dictates
-        // that 'onclose' will strictly fire immediately after this.
-        // Handling reconnect logic in onclose prevents double-firing.
       };
 
       ws.onclose = () => {
@@ -109,17 +93,10 @@ export function useGameSocket(roomId: string | null) {
         setIsConnected(false);
         setError("Connection lost. Reconnecting to game server...");
 
-        // Exponential Backoff with random Jitter
-        // This prevents the "Thundering Herd" problem where 20 players all
-        // attempt to reconnect at the exact same millisecond and crash the Go server.
-        const baseDelay = 1000; // Start with 1 second delay
-        const maxDelay = 15000; // Cap at 15 seconds
-        
-        // Calculate standard exponential time (1s, 2s, 4s, 8s, 15s)
+        const baseDelay = 1000;
+        const maxDelay = 15000;
         const backoffDelay = Math.min(baseDelay * Math.pow(2, reconnectAttempts.current), maxDelay);
-        // Inject 0-500ms of random jitter
         const jitter = Math.floor(Math.random() * 500); 
-        
         const nextAttemptMs = backoffDelay + jitter;
         
         reconnectAttempts.current++;
@@ -130,10 +107,8 @@ export function useGameSocket(roomId: string | null) {
       };
     };
 
-    // Ignite the engine!
     connect();
 
-    // 4. Safely wipe connection and backoff timers on component unmount
     return () => {
       isMounted = false;
       if (reconnectTimeoutRef.current) {
@@ -146,7 +121,6 @@ export function useGameSocket(roomId: string | null) {
     };
   }, [roomId]);
 
-  // 5. Expose an actionable pipeline for UI components to broadcast to Go
   const sendAction = useCallback(
     (type: string, payload: Record<string, unknown> = {}) => {
       if (

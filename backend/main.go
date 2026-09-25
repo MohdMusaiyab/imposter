@@ -15,7 +15,18 @@ import (
 // CORSMiddleware authorizes cross-origin fetch protocols naturally
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.Request.Header.Get("Origin")
+		allowedOrigin := os.Getenv("FRONTEND_URL")
+
+		if allowedOrigin == "" {
+			if origin == "" {
+				allowedOrigin = "http://localhost:3001"
+			} else {
+				allowedOrigin = origin
+			}
+		}
+
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")

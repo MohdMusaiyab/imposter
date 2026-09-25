@@ -34,15 +34,7 @@ func main() {
 	// -------------------------------------------------------------
 	// ✍️  ADD YOUR CUSTOM WORDS HERE
 	// -------------------------------------------------------------
-	customWords := []models.WordPair{
-		{WordA: "Javascript", WordB: "Typescript"},
-		{WordA: "Batman", WordB: "Superman"},
-		{WordA: "Winter", WordB: "Summer"},
-		{WordA: "Football", WordB: "Soccer"},
-		{WordA: "Movie", WordB: "Play"},
-		// Just copy and paste another set inside the array!
-	}
-
+	customWords := []models.WordPair{}
 	log.Printf("🌱 Attempting to insert %d new Word Pairs...", len(customWords))
 
 	result := db.Create(&customWords)

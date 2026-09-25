@@ -16,15 +16,8 @@ import (
 )
 
 const (
-	// How often the server pings a connected client to verify it's alive.
 	pingInterval = 15 * time.Second
-
-	// How long the server waits for a pong reply before treating the
-	// connection as dead and closing it. Mobile browsers that background
-	// the tab stop responding — this is the only reliable detection mechanism.
 	pongWait = 20 * time.Second
-
-	// Maximum time allowed to write any single message to the client.
 	writeWait = 10 * time.Second
 )
 
@@ -34,11 +27,9 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		allowedOrigin := os.Getenv("FRONTEND_URL")
 		if allowedOrigin == "" {
-			// Local development / LAN: Allow everything universally
 			return true
 		}
 		
-		// Production: Strictly match the WebSocket handshake Origin against the Vercel app
 		origin := r.Header.Get("Origin")
 		return origin == allowedOrigin
 	},
@@ -59,7 +50,6 @@ func ServeWS(c *gin.Context) {
 		return
 	}
 
-	// Sanitise: reject absurdly long names to prevent JSON broadcast bloat
 	if len(playerName) > 30 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Player name too long (max 30 chars)"})
 		return
@@ -97,16 +87,10 @@ func ServeWS(c *gin.Context) {
 }
 
 // writePump runs the server-side ping heartbeat on its own goroutine.
-// It sends a WebSocket ping frame every pingInterval seconds. If the client
-// does not respond with a pong within pongWait seconds, Gorilla's read
-// deadline will expire and ReadJSON in readPump will return an error,
-// triggering the graceful disconnect/cleanup path.
 func writePump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
 
-	// Configure the pong handler: whenever the client replies to a ping,
-	// extend the read deadline so readPump keeps the loop alive.
 	conn.SetPongHandler(func(string) error {
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
