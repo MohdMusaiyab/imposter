@@ -47,6 +47,8 @@ type Room struct {
 	// cleanup goroutine can safely evict idle/abandoned rooms.
 	LastActivity time.Time
 
+	UsedWords []uint
+
 	Mu sync.RWMutex // Exported so handlers can lock during broadcast
 }
 

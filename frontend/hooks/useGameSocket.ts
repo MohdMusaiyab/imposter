@@ -49,7 +49,7 @@ export function useGameSocket(roomId: string | null) {
       const session = JSON.parse(sessionStr);
 
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
-      const wsBaseUrl = isLocal ? `ws://${window.location.hostname}:9999` : 'wss://imposter-54yr.onrender.com';
+      const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL || (isLocal ? `ws://${window.location.hostname}:9999` : 'wss://imposter-54yr.onrender.com');
       
       const wsUrl = `${wsBaseUrl}/ws/room/${roomId}?playerId=${session.playerId}&playerName=${encodeURIComponent(session.name)}`;
       const ws = new WebSocket(wsUrl);

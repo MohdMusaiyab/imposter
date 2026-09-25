@@ -19,10 +19,10 @@ func CORSMiddleware() gin.HandlerFunc {
 		allowedOrigin := os.Getenv("FRONTEND_URL")
 
 		if allowedOrigin == "" {
-			if origin == "" {
-				allowedOrigin = "http://localhost:3001"
-			} else {
+			if origin == "http://localhost:3000" || origin == "http://localhost:3001" {
 				allowedOrigin = origin
+			} else {
+				allowedOrigin = "http://localhost:3000" // strict fallback
 			}
 		}
 

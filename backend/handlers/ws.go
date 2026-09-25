@@ -38,7 +38,22 @@ var upgrader = websocket.Upgrader{
 var (
 	roomClients = make(map[string]map[string]*websocket.Conn)
 	connMutex   = sync.RWMutex{}
+	
+	// matchRecordWorker processes writes sequentially to protect the DB from spikes
+	matchRecordWorker = make(chan models.MatchResult, 100)
 )
+
+func init() {
+	go func() {
+		for res := range matchRecordWorker {
+			// Blocks sequentially protecting Render connections limits
+			if db.DB != nil {
+				db.DB.Create(&res)
+			}
+		}
+	}()
+}
+
 
 func ServeWS(c *gin.Context) {
 	roomID := c.Param("roomId")
@@ -193,10 +208,46 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 			if !isHost {
 				continue
 			}
-			var wp models.WordPair
-			if err := db.DB.Order("RANDOM()").First(&wp).Error; err != nil {
-				wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
+			
+			// Get all available word pair IDs efficiently
+			var allIDs []uint
+			if err := db.DB.Model(&models.WordPair{}).Pluck("id", &allIDs).Error; err != nil {
+				log.Printf("Failed to load word pairs: %v", err)
 			}
+			
+			// Filter out already used words for this room
+			var availableIDs []uint
+			room.Mu.RLock()
+			usedMap := make(map[uint]bool)
+			for _, uID := range room.UsedWords {
+				usedMap[uID] = true
+			}
+			room.Mu.RUnlock()
+			
+			for _, id := range allIDs {
+				if !usedMap[id] {
+					availableIDs = append(availableIDs, id)
+				}
+			}
+
+			var wp models.WordPair
+			if len(availableIDs) == 0 {
+				// Fallback if we run out of words
+				wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
+			} else {
+				// Pick random securely in-memory
+				// Instead of complex RNG, let's just use map iteration randomness or basic length modulo
+				selectedID := availableIDs[time.Now().UnixNano()%int64(len(availableIDs))]
+				
+				if err := db.DB.First(&wp, selectedID).Error; err != nil {
+					wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
+				} else {
+					room.Mu.Lock()
+					room.UsedWords = append(room.UsedWords, selectedID)
+					room.Mu.Unlock()
+				}
+			}
+
 			if err := room.StartGame(wp.WordA, wp.WordB); err != nil {
 				conn.WriteJSON(gin.H{"error": err.Error()})
 				continue
@@ -234,7 +285,11 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 					TotalPlayers: totalPlayers,
 					ImposterWon:  winner == "IMPOSTER",
 				}
-				go func(r models.MatchResult) { db.DB.Create(&r) }(res)
+				select {
+				case matchRecordWorker <- res:
+				default:
+					log.Println("Match worker queue full, dropping record")
+				}
 			}
 
 		case "ADD_LOCAL_PLAYER":
@@ -271,7 +326,11 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 						TotalPlayers: totalPlayers,
 						ImposterWon:  winner == "IMPOSTER",
 					}
-					go func(r models.MatchResult) { db.DB.Create(&r) }(res)
+					select {
+					case matchRecordWorker <- res:
+					default:
+						log.Println("Match worker queue full, dropping record")
+					}
 				}
 			}
 
