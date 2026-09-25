@@ -16,7 +16,7 @@ export default function CreateRoom() {
 
     try {
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
-      const httpBaseUrl = isLocal ? `http://${window.location.hostname}:9999` : 'https://imposter-54yr.onrender.com';
+      const httpBaseUrl = process.env.NEXT_PUBLIC_API_URL || (isLocal ? `http://${window.location.hostname}:9999` : 'https://imposter-54yr.onrender.com');
       const response = await fetch(`${httpBaseUrl}/api/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Imposter | The Ultimate Word Bluff Game",
-  description: "Find the imposter before it's too late. A real-time multiplayer word game.",
+  title: "IMPOSTER — All Points Bulletin",
+  description:
+    "Eight suspects. One of them is lying. A real-time multiplayer word deduction game.",
 };
 
 export default function RootLayout({
@@ -23,13 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
-    >
-      <body className="antialiased min-h-screen flex flex-col font-sans">
-        {children}
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }
