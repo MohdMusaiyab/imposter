@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
+import HeadlineEyes from "./components/HeadlineEyes";
+import PencilLogo from "./components/PencilLogo";
 
 const space = Space_Grotesk({
   subsets: ["latin"],
@@ -34,21 +36,10 @@ const roster = [
   { name: "CYAN", color: "#1fb3c7", left: 44, top: 21, rot: 2 },
 ];
 
-const templates = [
-  (n: string) => `${n} reported a body in Electrical.`,
-  (n: string) => `${n} called an emergency meeting.`,
-  (n: string) => `${n} was ejected. Not The Impostor.`,
-  (n: string) => `${n} finished wiring — task complete.`,
-  (n: string) => `${n} was seen alone near Navigation.`,
-  (n: string) => `${n} voted, then changed their mind.`,
-];
 
-type CommEntry = { id: string; text: string; color: string };
 
 export default function LandingPage() {
-  const [playerCount, setPlayerCount] = useState(4808);
   const [flaggedIdx, setFlaggedIdx] = useState(-1);
-  const [comms, setComms] = useState<CommEntry[]>([]);
   const [stringPaths, setStringPaths] = useState<string>("");
   const stageRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLDivElement>(null);
@@ -85,7 +76,6 @@ export default function LandingPage() {
   };
 
   useEffect(() => {
-    // slight delay so the DOM is laid out before we measure
     const t = setTimeout(drawStrings, 120);
     return () => clearTimeout(t);
   }, []); // drawStrings is stable (no reactive deps) — intentional empty array
@@ -101,39 +91,14 @@ export default function LandingPage() {
   }, []); // drawStrings is stable — intentional empty array
 
   useEffect(() => {
-    // Player count drift
-    const pInt = setInterval(() => {
-      setPlayerCount((prev) => prev + Math.floor(Math.random() * 9) - 4);
-    }, 2500);
-
     // Flag a random suspect
     const flag = () => setFlaggedIdx(Math.floor(Math.random() * roster.length));
     const fTimer = setTimeout(flag, 1500);
     const fInt = setInterval(flag, 4000);
 
-    // Radio log entries
-    const push = () => {
-      const p = roster[Math.floor(Math.random() * roster.length)];
-      const text = templates[Math.floor(Math.random() * templates.length)](
-        p.name,
-      );
-      setComms((prev) => {
-        const next = [
-          ...prev,
-          { id: crypto.randomUUID(), text, color: p.color },
-        ];
-        if (next.length > 4) next.shift();
-        return next;
-      });
-    };
-    push();
-    const lInt = setInterval(push, 2700);
-
     return () => {
-      clearInterval(pInt);
       clearTimeout(fTimer);
       clearInterval(fInt);
-      clearInterval(lInt);
     };
   }, []);
 
@@ -143,13 +108,8 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="nav">
-        <div className={`logo`}>
-          <span className={`badge-icon ${mono.className}`}>3</span>
-          IMPOSTER
-        </div>
-        <Link href="/room/join" className={`nav-cta ${mono.className}`}>
-          JOIN A LOBBY
-        </Link>
+        {/* Multi-colour pencil logo */}
+        <PencilLogo />
       </nav>
 
       {/* STAGE */}
@@ -170,10 +130,11 @@ export default function LandingPage() {
 
         {/* Headline card */}
         <div className="headline-card" ref={headlineRef}>
+          <HeadlineEyes />
           <span className="corner-tape a" />
           <span className="corner-tape b" />
-          <div className={`case-num ${mono.className}`}>CASE #0417 · OPEN</div>
-          <h1 className={kalam.className}>
+          <div className={`case-num ${mono.className}`}>GAME #0417 · OPEN</div>
+          <h1 className={kalam.className} style={{ marginLeft: "8%" }}>
             Find the{" "}
             <span className="circle-word">
               imposter
@@ -181,7 +142,6 @@ export default function LandingPage() {
                 <path d="M4,20 C4,4 96,4 96,20 C96,36 4,36 4,20" />
               </svg>
             </span>
-            .
           </h1>
           <p className="headline-note">
             One room. One shared word. One liar hiding in plain sight. Watch
@@ -239,34 +199,14 @@ export default function LandingPage() {
             href="/room/create"
             className={`btn btn-primary ${space.className}`}
           >
-            ENTER THE ROOM
+            HOST A GAME
           </Link>
           <Link
             href="/room/join"
             className={`btn btn-secondary ${space.className}`}
           >
-            WATCH A LIVE ROUND
+            JOIN A GAME
           </Link>
-        </div>
-
-        {/* Transcript / Radio Log */}
-        <div className="transcript">
-          <div className={`lbl ${mono.className}`}>
-            <span>RADIO LOG</span>
-            <span>LIVE</span>
-          </div>
-          <div id="commsList">
-            {comms.map((entry, idx) => (
-              <div
-                key={entry.id}
-                className={`entry show`}
-                style={{ animationDelay: `${idx * 0}ms` }}
-              >
-                <span className="dot" style={{ background: entry.color }} />
-                <span>{entry.text}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </section>

@@ -75,9 +75,9 @@ a {
   z-index: 6;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 24px clamp(20px, 5vw, 64px) 0;
-  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  justify-content: center;
+  padding: 0 clamp(20px, 5vw, 64px);
+  padding-top: calc(clamp(24px, 4.5vh, 70px) + env(safe-area-inset-top, 0px));
 }
 
 .logo {
@@ -222,10 +222,10 @@ h1 {
 }
 .circle-word svg {
   position: absolute;
-  left: -12%;
-  top: -32%;
-  width: 124%;
-  height: 172%;
+  left: -35%;
+  top: -75%;
+  width: 170%;
+  height: 250%;
   overflow: visible;
 }
 .circle-word path {
@@ -233,9 +233,9 @@ h1 {
   stroke: var(--red);
   stroke-width: 3.5;
   stroke-linecap: round;
-  /* increased from 310 — 'imposter' is a wider word so the ellipse perimeter is longer */
-  stroke-dasharray: 380;
-  stroke-dashoffset: 380;
+  /* larger perimeter requires a higher dash string */
+  stroke-dasharray: 480;
+  stroke-dashoffset: 480;
   animation: draw-ring 900ms ease-out 1s forwards;
 }
 @keyframes draw-ring { to { stroke-dashoffset: 0; } }

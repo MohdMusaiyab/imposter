@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import PencilLogo from "@/app/components/PencilLogo";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 
@@ -51,18 +52,28 @@ export default function JoinRoom() {
       <div className="board-lines" />
 
       <nav className="nav">
-        <div className="logo">
-          <span className={`badge-icon ${mono.className}`}>3</span>
-          IMPOSTER
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <PencilLogo />
+          <Link
+            href="/"
+            className={mono.className}
+            style={{
+              fontSize: 11,
+              color: "#77788a",
+              letterSpacing: "0.5px",
+              borderBottom: "1px dashed #77788a",
+              paddingBottom: 2,
+              textDecoration: "none"
+            }}
+          >
+            ← BACK TO HOME
+          </Link>
         </div>
-        <Link href="/" className={`nav-cta ${mono.className}`}>
-          ← HOME
-        </Link>
       </nav>
 
       <div className={`apb-tag ${mono.className}`}>
         <span className="dot" />
-        FIELD AGENT ENTRY — REPORT TO YOUR CASE
+        FIELD AGENT ENTRY — JOIN A GAME
       </div>
 
       <div
@@ -97,13 +108,13 @@ export default function JoinRoom() {
             className={kalam.className}
             style={{ fontSize: "clamp(1.7rem, 5vw, 2.4rem)", marginBottom: 6, lineHeight: 1.2 }}
           >
-            Report to Your Case
+            Join a Game
           </h1>
           <p
             className={mono.className}
             style={{ fontSize: 13, color: "#77788a", marginBottom: 28 }}
           >
-            Enter the case code and your alias to join your squad.
+            Enter the room code and your alias to join.
           </p>
 
           <form onSubmit={handleJoin} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -112,7 +123,7 @@ export default function JoinRoom() {
                 className={mono.className}
                 style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
               >
-                CASE CODE
+                ROOM CODE
               </label>
               <input
                 type="text"
@@ -191,7 +202,7 @@ export default function JoinRoom() {
                 letterSpacing: "0.5px",
               }}
             >
-              OPEN A NEW CASE
+              HOST A GAME
             </Link>
           </div>
         </div>

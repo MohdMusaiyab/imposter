@@ -111,7 +111,7 @@ function GameRoom({ roomId }: { roomId: string }) {
             className={mono.className}
             style={{ fontSize: 11, letterSpacing: 1, color: "#e8433a", border: "1px solid #e8433a", padding: "3px 9px", display: "inline-block", marginBottom: 16 }}
           >
-            CASE CLOSED · CONNECTION LOST
+            GAME OVER · CONNECTION LOST
           </div>
           <p style={{ color: "#77788a", marginBottom: 24, fontSize: 14 }}>{error}</p>
           <Link href="/" className={`btn btn-primary ${space.className}`} style={{ display: "inline-block" }}>
@@ -247,7 +247,7 @@ function GameRoom({ roomId }: { roomId: string }) {
               paddingLeft: 14,
             }}
           >
-            CASE{" "}
+            ROOM{" "}
             <span style={{ color: "#e8433a", fontWeight: 600 }}>#{gameState.ID}</span>
           </div>
         </div>
@@ -370,7 +370,7 @@ function LobbyView({
       <span className="corner-tape b" />
 
       <div className={mono.className} style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 6 }}>
-        CASE STATUS · GATHERING PERSONNEL
+        ROOM STATUS · GATHERING PERSONNEL
       </div>
       <h2
         className={kalam.className}
@@ -638,7 +638,7 @@ function ResultsView({
         className={mono.className}
         style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 12 }}
       >
-        {gameContinues ? "ROUND COMPLETE" : "CASE CLOSED"}
+        {gameContinues ? "ROUND COMPLETE" : "GAME OVER"}
       </div>
 
       <h2

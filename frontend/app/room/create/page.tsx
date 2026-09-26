@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import PencilLogo from "@/app/components/PencilLogo";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 
@@ -78,19 +79,29 @@ export default function CreateRoom() {
 
       {/* Nav */}
       <nav className="nav">
-        <div className="logo">
-          <span className={`badge-icon ${mono.className}`}>3</span>
-          IMPOSTER
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <PencilLogo />
+          <Link
+            href="/"
+            className={mono.className}
+            style={{
+              fontSize: 11,
+              color: "#77788a",
+              letterSpacing: "0.5px",
+              borderBottom: "1px dashed #77788a",
+              paddingBottom: 2,
+              textDecoration: "none"
+            }}
+          >
+            ← BACK TO HOME
+          </Link>
         </div>
-        <Link href="/" className={`nav-cta ${mono.className}`}>
-          ← HOME
-        </Link>
       </nav>
 
       {/* APB tag */}
       <div className={`apb-tag ${mono.className}`}>
         <span className="dot" />
-        INCIDENT REPORT — OPEN A NEW CASE
+        INCIDENT REPORT — HOST A GAME
       </div>
 
       {/* Form card */}
@@ -119,7 +130,7 @@ export default function CreateRoom() {
           <span className="corner-tape a" />
           <span className="corner-tape b" />
 
-          {/* Case label */}
+          {/* Game label */}
           <div className={`case-num ${mono.className}`} style={{ marginBottom: 20 }}>
             FORM A-1 · CREATE ROOM
           </div>
@@ -128,13 +139,13 @@ export default function CreateRoom() {
             className={kalam.className}
             style={{ fontSize: "clamp(1.7rem, 5vw, 2.4rem)", marginBottom: 6, lineHeight: 1.2 }}
           >
-            Open a New Case
+            Host a Game
           </h1>
           <p
             className={mono.className}
             style={{ fontSize: 13, color: "#77788a", marginBottom: 28 }}
           >
-            Configure your room. Players will join using the case code.
+            Configure your room. Players will join using the room code.
           </p>
 
           <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -299,7 +310,7 @@ export default function CreateRoom() {
                 (e.currentTarget as HTMLButtonElement).style.boxShadow = loading ? "none" : "4px 4px 0 #16161a";
               }}
             >
-              {loading ? "OPENING CASE..." : "OPEN THE CASE →"}
+              {loading ? "STARTING GAME..." : "HOST GAME →"}
             </button>
           </form>
         </div>
