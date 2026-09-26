@@ -129,24 +129,31 @@ export default function LandingPage() {
         </div>
 
         {/* Headline card */}
+        {/* Headline card */}
         <div className="headline-card" ref={headlineRef}>
-          <HeadlineEyes />
           <span className="corner-tape a" />
           <span className="corner-tape b" />
-          <div className={`case-num ${mono.className}`}>GAME #0417 · OPEN</div>
-          <h1 className={kalam.className} style={{ marginLeft: "8%" }}>
-            Find the{" "}
-            <span className="circle-word">
-              imposter
-              <svg viewBox="0 0 100 40">
-                <path d="M4,20 C4,4 96,4 96,20 C96,36 4,36 4,20" />
-              </svg>
-            </span>
-          </h1>
-          <p className="headline-note">
-            One room. One shared word. One liar hiding in plain sight. Watch
-            closely — then call it.
-          </p>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className={`case-num ${mono.className}`}>GAME #0417 · OPEN</div>
+              <h1 className={kalam.className} style={{ marginLeft: "6%" }}>
+                Find the{" "}
+                <span className="circle-word">
+                  imposter
+                  <svg viewBox="0 0 100 40">
+                    <path d="M4,20 C4,4 96,4 96,20 C96,36 4,36 4,20" />
+                  </svg>
+                </span>
+              </h1>
+              <p className="headline-note">
+                One room. One shared word. One liar hiding in plain sight. Watch
+                closely — then call it.
+              </p>
+            </div>
+            
+            <HeadlineEyes />
+          </div>
         </div>
 
         {/* Sticky note */}

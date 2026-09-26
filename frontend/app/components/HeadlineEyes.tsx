@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
 
 /**
- * Large googly eyes that sit on the right side of the headline card.
- * They fade in when the parent card is hovered, and the pupils track the cursor.
+ * Googly eyes that occupy the right portion of the headline card.
+ * - All sizing is driven by a single CSS custom property `--eye-size`
+ *   defined on `.headline-eyes-wrap`, making it fully responsive via CSS alone.
+ * - The blink animation is pure CSS (no framer-motion), so `--eye-size`
+ *   is respected at every breakpoint without JS intervention.
+ * - Pupils track the cursor via inline transform only.
  */
 export default function HeadlineEyes() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -13,137 +16,62 @@ export default function HeadlineEyes() {
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    // We attach listeners to the parent card so the eyes track/reveal
-    // as soon as the user hovers anywhere on the card.
-    const parent = containerRef.current?.parentElement;
-    if (!parent) return;
+    // Listen on the nearest .headline-card ancestor for hover/move
+    const card =
+      (containerRef.current?.closest(".headline-card") as HTMLElement) ??
+      containerRef.current?.parentElement;
+    if (!card) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-
       const dx = e.clientX - cx;
       const dy = e.clientY - cy;
       const angle = Math.atan2(dy, dx);
-      
-      const dist = Math.hypot(dx, dy);
-      const limit = Math.min(dist, 100) / 100; // normalize distance influence
-
-      setCoords({
-        x: Math.cos(angle) * limit,
-        y: Math.sin(angle) * limit,
-      });
+      const limit = Math.min(Math.hypot(dx, dy), 100) / 100;
+      setCoords({ x: Math.cos(angle) * limit, y: Math.sin(angle) * limit });
     };
 
-    const handlePos = () => setIsHovered(true);
+    const handleEnter = () => setIsHovered(true);
     const handleLeave = () => {
       setIsHovered(false);
       setCoords({ x: 0, y: 0 });
     };
 
-    parent.addEventListener("mousemove", handleMouseMove);
-    parent.addEventListener("mouseenter", handlePos);
-    parent.addEventListener("mouseleave", handleLeave);
-
+    card.addEventListener("mousemove", handleMove);
+    card.addEventListener("mouseenter", handleEnter);
+    card.addEventListener("mouseleave", handleLeave);
     return () => {
-      parent.removeEventListener("mousemove", handleMouseMove);
-      parent.removeEventListener("mouseenter", handlePos);
-      parent.removeEventListener("mouseleave", handleLeave);
+      card.removeEventListener("mousemove", handleMove);
+      card.removeEventListener("mouseenter", handleEnter);
+      card.removeEventListener("mouseleave", handleLeave);
     };
   }, []);
 
-  const pupilStyle = {
-    /* Multiplier determines how far the pupils travel visually within the eye */
-    transform: `translate(calc(-50% + ${coords.x * 35}%), calc(-50% + ${coords.y * 35}%))`,
-  };
+  const px = coords.x * 35;
+  const py = coords.y * 35;
 
   return (
     <div
       ref={containerRef}
+      className="headline-eyes-wrap"
       aria-hidden="true"
-      style={{
-        position: "absolute",
-        top: 0,
-        right: "5%",         // sit on the right side of the card
-        bottom: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "1.2rem",       // large gap between eyes
-        pointerEvents: "none",
-        zIndex: 5,
-        opacity: isHovered ? 1 : 0,
-        transition: "opacity 0.3s ease",
-      }}
+      style={{ opacity: isHovered ? 1 : 0 }}
     >
-      {/* Left Large Eye */}
-      <motion.div
-        style={{
-          position: "relative",
-          width: "4rem",      // Massive eye
-          background: "#fff",
-          borderRadius: "50%",
-          boxShadow: "0 0 0 4px #181614, -4px 8px 12px rgba(0,0,0,0.15)",
-          overflow: "hidden",
-        }}
-        animate={{ height: ["4rem", "4rem", "0rem", "4rem"] }}
-        transition={{
-          duration: 4,
-          times: [0, 0.92, 0.96, 1],
-          repeat: Infinity,
-          ease: "linear", // CSS ease-in-out equivalent
-        }}
-      >
+      <div className="headline-eye">
         <span
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: "1.8rem",
-            height: "1.8rem",
-            background: "#181614",
-            borderRadius: "50%",
-            transition: "transform 0.05s linear",
-            ...pupilStyle,
-          }}
+          className="headline-pupil"
+          style={{ transform: `translate(calc(-50% + ${px}%), calc(-50% + ${py}%))` }}
         />
-      </motion.div>
-
-      {/* Right Large Eye */}
-      <motion.div
-        style={{
-          position: "relative",
-          width: "4rem",
-          background: "#fff",
-          borderRadius: "50%",
-          boxShadow: "0 0 0 4px #181614, -4px 8px 12px rgba(0,0,0,0.15)",
-          overflow: "hidden",
-        }}
-        animate={{ height: ["4rem", "4rem", "0rem", "4rem"] }}
-        transition={{
-          duration: 4,
-          delay: 0.2,
-          times: [0, 0.92, 0.96, 1],
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      >
+      </div>
+      <div className="headline-eye blink-offset">
         <span
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: "1.8rem",
-            height: "1.8rem",
-            background: "#181614",
-            borderRadius: "50%",
-            transition: "transform 0.05s linear",
-            ...pupilStyle,
-          }}
+          className="headline-pupil"
+          style={{ transform: `translate(calc(-50% + ${px}%), calc(-50% + ${py}%))` }}
         />
-      </motion.div>
+      </div>
     </div>
   );
 }
