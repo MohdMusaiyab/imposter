@@ -144,8 +144,10 @@ a {
   position: relative;
   z-index: 5;
   max-width: 1220px;
-  margin: 0 auto;
-  height: clamp(800px, 112vw, 1000px);
+  /* Fluid top margin to create breathing room below the logo on all screens */
+  margin: clamp(30px, 5vh, 80px) auto 0;
+  /* Tame the massive desktop height so it fits seamlessly on screen without scrolling, while keeping mobile long enough to prevent bunching */
+  height: clamp(750px, 85vh, 880px);
   padding: 0 clamp(16px, 3vw, 30px);
 }
 

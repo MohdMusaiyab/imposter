@@ -122,11 +122,6 @@ export default function LandingPage() {
           dangerouslySetInnerHTML={{ __html: stringPaths }}
         />
 
-        {/* Stat tag */}
-        <div className="stat-tag">
-          <b className={kalam.className}>63%</b>
-          <span className={mono.className}>IMPOSTOR WIN RATE</span>
-        </div>
 
         {/* Headline card */}
         {/* Headline card */}
