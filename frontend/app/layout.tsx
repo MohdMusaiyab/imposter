@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     title: "Imposter | The Word Deduction Party Game",
     description: "Uncover the hidden imposter among your friends in this real-time word deduction game.",
   },
+  verification: {
+    google: "tZEIXbvD5UYrx3nodRLPoBvTizs8JtiI0uhBxmyLM4M",
+  },
 };
 
 export default function RootLayout({
