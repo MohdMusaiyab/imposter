@@ -13,7 +13,6 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"] }
 export default function CreateRoom() {
   const router = useRouter();
   const [playerName, setPlayerName] = useState("");
-  const [isPrivate, setIsPrivate] = useState(true);
   const [isSingleDevice, setIsSingleDevice] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -38,7 +37,7 @@ export default function CreateRoom() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          isPrivate: isSingleDevice ? true : isPrivate,
+          isPrivate: true,
           isSingleDevice,
         }),
       });
@@ -57,7 +56,7 @@ export default function CreateRoom() {
         name: playerName.trim(),
         roomId: actualRoomId,
         isSingleDevice,
-        isPrivate: isSingleDevice ? true : isPrivate,
+        isPrivate: true,
         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       };
 
@@ -225,52 +224,6 @@ export default function CreateRoom() {
               </p>
             </div>
 
-            {/* Room visibility (multi-device only) */}
-            {!isSingleDevice && (
-              <div style={{ borderTop: "1px solid #e9e9ee", paddingTop: 18 }}>
-                <label
-                  className={mono.className}
-                  style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
-                >
-                  ROOM VISIBILITY
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {[
-                    { label: "Public", val: false },
-                    { label: "Private", val: true },
-                  ].map(({ label, val }) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => setIsPrivate(val)}
-                      style={{
-                        padding: "12px 8px",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: "inherit",
-                        border: "1.5px solid",
-                        borderColor: isPrivate === val ? "#e8433a" : "#e9e9ee",
-                        background: isPrivate === val ? "#e8433a" : "#fff",
-                        color: isPrivate === val ? "#fff" : "#77788a",
-                        borderRadius: 3,
-                        cursor: "pointer",
-                        transition: "all .18s",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <p
-                  className={mono.className}
-                  style={{ fontSize: 11, color: "#77788a", marginTop: 8 }}
-                >
-                  {isPrivate
-                    ? "Only players with the secret code can join."
-                    : "Anyone can discover and join this room."}
-                </p>
-              </div>
-            )}
 
             {err && (
               <p

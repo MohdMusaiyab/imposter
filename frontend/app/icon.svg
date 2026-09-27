@@ -1,0 +1,35 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hand-drawn marker circle, split into colored arc segments -->
+  <path d="M 32 6 C 40 5.5, 47 8, 52 13" 
+        fill="transparent" stroke="#e8433a" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 52 13 C 58 19, 61 26, 61 32" 
+        fill="transparent" stroke="#2f6fe4" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 61 32 C 61.5 40, 59 47, 54 52" 
+        fill="transparent" stroke="#f0b429" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 54 52 C 48 58, 40 60.5, 32 59.5" 
+        fill="transparent" stroke="#22a866" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 32 59.5 C 24 59, 17 56, 12 51" 
+        fill="transparent" stroke="#8c5cd8" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 12 51 C 7 45, 5 38, 5.5 31" 
+        fill="transparent" stroke="#1fb3c7" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 5.5 31 C 6 23, 9.5 16, 15 11" 
+        fill="transparent" stroke="#e8433a" stroke-width="7" 
+        stroke-linecap="round" />
+  <path d="M 15 11 C 20 7.5, 26 5.5, 32 6" 
+        fill="transparent" stroke="#2f6fe4" stroke-width="7" 
+        stroke-linecap="round" />
+
+  <!-- Bold question mark -->
+  <text x="32" y="45" 
+        font-family="'Kalam', 'Comic Sans MS', cursive, sans-serif" 
+        font-weight="700" 
+        font-size="38" 
+        fill="#181614" 
+        text-anchor="middle">?</text>
+</svg>
