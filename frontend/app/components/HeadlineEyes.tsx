@@ -56,9 +56,8 @@ export default function HeadlineEyes() {
   return (
     <div
       ref={containerRef}
-      className="headline-eyes-wrap"
+      className={`headline-eyes-wrap ${isHovered ? "eyes-hovered" : ""}`}
       aria-hidden="true"
-      style={{ opacity: isHovered ? 1 : 0 }}
     >
       <div className="headline-eye">
         <span

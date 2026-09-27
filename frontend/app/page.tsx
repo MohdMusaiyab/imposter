@@ -26,14 +26,14 @@ const PIN_COLORS = [
 ];
 
 const roster = [
-  { name: "ROSE", color: "#e8433a", left: 40, top: 6, rot: -3 },
-  { name: "COBALT", color: "#2f6fe4", left: 56, top: 2, rot: 2 },
-  { name: "MOSS", color: "#22a866", left: 70, top: 10, rot: -2 },
-  { name: "AMBER", color: "#f0b429", left: 32, top: 33, rot: 4 },
-  { name: "CRIMSON", color: "#e8433a", left: 50, top: 39, rot: -3 },
-  { name: "PLUM", color: "#8c5cd8", left: 65, top: 35, rot: 3 },
-  { name: "RUST", color: "#1fb3c7", left: 78, top: 29, rot: -4 },
-  { name: "CYAN", color: "#1fb3c7", left: 44, top: 21, rot: 2 },
+  { name: "ROSE", color: "#e8433a", left: 40, top: 6, rot: -3, word: "PIZZA" },
+  { name: "COBALT", color: "#2f6fe4", left: 56, top: 2, rot: 2, word: "PIZZA" },
+  { name: "MOSS", color: "#22a866", left: 70, top: 10, rot: -2, word: "PIZZA" },
+  { name: "AMBER", color: "#f0b429", left: 32, top: 33, rot: 4, word: "BURGER", isImposter: true },
+  { name: "CRIMSON", color: "#e8433a", left: 50, top: 39, rot: -3, word: "PIZZA" },
+  { name: "PLUM", color: "#8c5cd8", left: 65, top: 35, rot: 3, word: "PIZZA" },
+  { name: "RUST", color: "#1fb3c7", left: 78, top: 29, rot: -4, word: "PIZZA" },
+  { name: "CYAN", color: "#1fb3c7", left: 44, top: 21, rot: 2, word: "PIZZA" },
 ];
 
 
@@ -181,10 +181,18 @@ export default function LandingPage() {
                 style={{ background: PIN_COLORS[i % PIN_COLORS.length] }}
               />
               <div className="photo">
-                <svg viewBox="0 0 24 24" style={{ stroke: p.color }}>
+                <svg className="profile-icon" viewBox="0 0 24 24" style={{ stroke: p.color }}>
                   <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6Z" />
                 </svg>
                 <span className="redact" />
+                
+                {/* Word revealed inside the card on hover */}
+                <div className={`revealed-word ${mono.className}`}>
+                  {p.word}
+                  {p.isImposter && (
+                    <span className="imposter-label">IMPOSTER</span>
+                  )}
+                </div>
               </div>
               <div className="meta">
                 <span className={`num ${mono.className}`}>#0{i + 1}</span>
@@ -211,6 +219,37 @@ export default function LandingPage() {
           </Link>
         </div>
       </div>
+
+      {/* Developer Footer */}
+      <footer
+        className={mono.className}
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          width: "100%",
+          textAlign: "center",
+          fontSize: "11px",
+          letterSpacing: "1px",
+          color: "#77788a",
+          zIndex: 10,
+        }}
+      >
+        © {new Date().getFullYear()} · BUILT BY{" "}
+        <a
+          href="https://itsmusaiyab.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: "#e8433a",
+            textDecoration: "none",
+            fontWeight: 600,
+            borderBottom: "1px dashed #e8433a",
+            paddingBottom: "2px",
+          }}
+        >
+          MOHD MUSAIYAB
+        </a>
+      </footer>
     </section>
   );
 }
