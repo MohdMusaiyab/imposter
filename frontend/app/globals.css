@@ -317,6 +317,23 @@ h1 {
 }
 .sticky:hover { transform: rotate(0deg) scale(1.05); }
 
+/* 404 specific sticky placement to avoid colliding with the centered card on mobile */
+.sticky-404 {
+  right: 12%;
+  bottom: 15%;
+  left: auto;
+  transform: rotate(-4deg);
+}
+@media (max-width: 650px) {
+  .sticky-404 {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    margin: 20px auto 40px;
+    transform: rotate(2deg);
+  }
+}
+
 /* ---------- SUSPECT CARDS ---------- */
 .suspect {
   position: absolute;
