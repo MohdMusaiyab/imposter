@@ -41,6 +41,10 @@ func (r *Room) AddPlayer(playerID, name string) error {
 		}
 	}
 
+	if len(r.Players) >= 10 {
+		return errors.New("room is full (10 players max)")
+	}
+
 	isHost := len(r.Players) == 0
 	r.Players[playerID] = &Player{
 		ID:     playerID,
@@ -77,7 +81,20 @@ func (r *Room) RemovePlayer(playerID string) {
 			// Already eliminated — only need to transfer host below if needed
 		} else {
 			p.IsDead = true
-			if p.IsImposter {
+
+			impostersAlive := 0
+			crewAlive := 0
+			for _, op := range r.Players {
+				if !op.IsDead {
+					if op.IsImposter {
+						impostersAlive++
+					} else {
+						crewAlive++
+					}
+				}
+			}
+
+			if impostersAlive == 0 {
 				r.Winner = "CREW"
 				r.Phase = PhaseResults
 				r.LastEliminated = p.Name + " (Left Match)"
@@ -86,23 +103,16 @@ func (r *Room) RemovePlayer(playerID string) {
 						mp.Score += 100
 					}
 				}
-			} else {
-				aliveCount := 0
+			} else if impostersAlive >= crewAlive {
+				r.Winner = "IMPOSTER"
+				r.Phase = PhaseResults
+				r.LastEliminated = p.Name + " (Left Match)"
 				for _, op := range r.Players {
-					if !op.IsDead {
-						aliveCount++
+					if op.IsImposter {
+						op.Score += 250
 					}
 				}
-				if aliveCount <= 2 {
-					r.Winner = "IMPOSTER"
-					r.Phase = PhaseResults
-					r.LastEliminated = p.Name + " (Left Match)"
-					for _, op := range r.Players {
-						if op.IsImposter {
-							op.Score += 250
-						}
-					}
-				} else {
+			} else {
 					// Advance phases if the departing player was the last one blocking
 					if r.Phase == PhaseReveal {
 						allReady := true
@@ -130,7 +140,6 @@ func (r *Room) RemovePlayer(playerID string) {
 				}
 			}
 		}
-	}
 
 	// Transfer host rights to the first remaining player
 	if isForfeitHost {
@@ -171,11 +180,24 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	imposterIdx := rng.Intn(len(pids))
+
+	// Dynamically map Imposter counts based on lobby size
+	imposterCounts := map[int]int{
+		3: 1, 4: 1, 5: 1,
+		6: 2, 7: 2,
+		8: 3, 9: 3,
+		10: 4,
+	}
+	numImps := imposterCounts[len(pids)]
+	if numImps == 0 {
+		numImps = 1 // Fallback
+	}
+
+	rng.Shuffle(len(pids), func(i, j int) {
+		pids[i], pids[j] = pids[j], pids[i]
+	})
 
 	// Randomly swap which word belongs to Crew vs Imposter.
-	// Previously WordA was always Crew — now it's a 50/50 coin flip,
-	// preventing players from deducing their role by recognising patterns.
 	if rng.Intn(2) == 0 {
 		crewWord, imposterWord = imposterWord, crewWord
 	}
@@ -183,10 +205,11 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 	r.ImposterWord = imposterWord
 
 	for i, pid := range pids {
-		if i == imposterIdx {
+		if i < numImps {
 			r.Players[pid].IsImposter = true
 			r.Players[pid].Word = r.ImposterWord
 		} else {
+			r.Players[pid].IsImposter = false
 			r.Players[pid].Word = r.CrewWord
 		}
 	}
