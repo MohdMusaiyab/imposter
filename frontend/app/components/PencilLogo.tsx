@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Kalam } from "next/font/google";
 
 const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
@@ -38,7 +37,6 @@ export default function PencilLogo() {
             color,
             display: "inline-block",
             transform: `rotate(${rot}deg) translateY(${ty}px)`,
-            /* Slight text-shadow makes it feel like a pencil stroke */
             textShadow: `1px 1px 0 ${color}33, 0 0 8px ${color}22`,
           }}
         >

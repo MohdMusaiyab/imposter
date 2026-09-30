@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"imposter-backend/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"imposter-backend/models"
 )
 
 var DB *gorm.DB
@@ -28,10 +28,6 @@ func InitDB() error {
 		return fmt.Errorf("failed to connect database: %v", err)
 	}
 
-	// 1. Configure the connection pool BEFORE any DB operations.
-	//    Previously these limits were applied after AutoMigrate and Seed
-	//    ran, meaning those heavy queries could briefly exhaust Neon's
-	//    free-tier connection limit on cold starts.
 	sqlDB, err := DB.DB()
 	if err != nil {
 		return fmt.Errorf("failed to get generic database object: %v", err)
@@ -39,15 +35,11 @@ func InitDB() error {
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetMaxOpenConns(25)
 
-	// 2. AutoMigrate runs with a properly capped pool now
 	log.Println("Running Auto-Migration for DB schemas...")
 	if err = DB.AutoMigrate(&models.WordPair{}, &models.MatchResult{}); err != nil {
 		return fmt.Errorf("failed to migrate tables: %v", err)
 	}
 
-	// Note: AutoMigrate safely maintains column structure without modifying existing data.
-	// We no longer call SeedDatabase(DB) here since you are managing Word dictionaries 
-	// externally via your custom CLI seed scripts!
 	log.Println("✅ Successfully connected & synced with Neon PostgreSQL via GORM")
 	return nil
 }

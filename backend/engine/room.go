@@ -13,9 +13,7 @@ func (r *Room) AddPlayer(playerID, name string) error {
 
 	normalizedName := strings.ReplaceAll(strings.ToLower(name), " ", "")
 
-	// Reconnect case: player re-joins with same ID (e.g. page refresh)
 	if player, exists := r.Players[playerID]; exists {
-		// Prevent taking someone else's name even on reconnect
 		for existingID, p := range r.Players {
 			if existingID != playerID {
 				existingNormalized := strings.ReplaceAll(strings.ToLower(p.Name), " ", "")
@@ -33,7 +31,6 @@ func (r *Room) AddPlayer(playerID, name string) error {
 		return errors.New("cannot join a match that is already in progress")
 	}
 
-	// Prevent duplicate names for new players
 	for _, p := range r.Players {
 		existingNormalized := strings.ReplaceAll(strings.ToLower(p.Name), " ", "")
 		if normalizedName == existingNormalized {
@@ -50,18 +47,13 @@ func (r *Room) AddPlayer(playerID, name string) error {
 		ID:     playerID,
 		Name:   name,
 		IsHost: isHost,
-		// Use the dedicated counter instead of len(Players).
-		// len() decreases when players leave during lobby, which would give
-		// the next joiner a duplicate Order value and break UI sort order.
-		Order: r.nextOrder,
+		Order:  r.nextOrder,
 	}
 	r.nextOrder++
 	r.LastActivity = time.Now()
 	return nil
 }
 
-// RemovePlayer gracefully excises a user. If mid-match, treats as an
-// elimination / forfeit. Host rights are transferred to the next player.
 func (r *Room) RemovePlayer(playerID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
@@ -78,7 +70,6 @@ func (r *Room) RemovePlayer(playerID string) {
 		delete(r.Players, playerID)
 	} else {
 		if p.IsDead {
-			// Already eliminated — only need to transfer host below if needed
 		} else {
 			p.IsDead = true
 
@@ -113,35 +104,33 @@ func (r *Room) RemovePlayer(playerID string) {
 					}
 				}
 			} else {
-					// Advance phases if the departing player was the last one blocking
-					if r.Phase == PhaseReveal {
-						allReady := true
-						for _, op := range r.Players {
-							if !op.IsDead && !op.IsReady {
-								allReady = false
-								break
-							}
+				if r.Phase == PhaseReveal {
+					allReady := true
+					for _, op := range r.Players {
+						if !op.IsDead && !op.IsReady {
+							allReady = false
+							break
 						}
-						if allReady {
-							r.Phase = PhaseDiscussion
+					}
+					if allReady {
+						r.Phase = PhaseDiscussion
+					}
+				} else if r.Phase == PhaseVoting {
+					allVoted := true
+					for _, op := range r.Players {
+						if !op.IsDead && !op.HasVoted {
+							allVoted = false
+							break
 						}
-					} else if r.Phase == PhaseVoting {
-						allVoted := true
-						for _, op := range r.Players {
-							if !op.IsDead && !op.HasVoted {
-								allVoted = false
-								break
-							}
-						}
-						if allVoted {
-							r.tallyVotesLocked()
-						}
+					}
+					if allVoted {
+						r.tallyVotesLocked()
 					}
 				}
 			}
 		}
+	}
 
-	// Transfer host rights to the first remaining player
 	if isForfeitHost {
 		if r.Phase != PhaseLobby {
 			p.IsHost = false
@@ -181,7 +170,6 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// Dynamically map Imposter counts based on lobby size
 	imposterCounts := map[int]int{
 		3: 1, 4: 1, 5: 1,
 		6: 2, 7: 2,
@@ -190,14 +178,13 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 	}
 	numImps := imposterCounts[len(pids)]
 	if numImps == 0 {
-		numImps = 1 // Fallback
+		numImps = 1
 	}
 
 	rng.Shuffle(len(pids), func(i, j int) {
 		pids[i], pids[j] = pids[j], pids[i]
 	})
 
-	// Randomly swap which word belongs to Crew vs Imposter.
 	if rng.Intn(2) == 0 {
 		crewWord, imposterWord = imposterWord, crewWord
 	}
@@ -287,8 +274,6 @@ func (r *Room) RegisterVote(voterID, targetID string) {
 	}
 }
 
-// tallyVotesLocked tallies votes and resolves the round.
-// Caller MUST already hold Mu.Lock().
 func (r *Room) tallyVotesLocked() {
 	votes := make(map[string]int)
 	for _, p := range r.Players {
@@ -349,8 +334,6 @@ func (r *Room) tallyVotesLocked() {
 	}
 }
 
-// ForceEliminate bypasses vote-counting for single-device consensus mode.
-// Host selects the group's agreed target directly.
 func (r *Room) ForceEliminate(targetID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()

@@ -3,16 +3,14 @@ package db
 import (
 	"log"
 
-	"imposter-backend/models"
 	"gorm.io/gorm"
+	"imposter-backend/models"
 )
 
-// SeedDatabase ensures our DB always has a basic dictionary of words to run.
 func SeedDatabase(db *gorm.DB) {
 	var count int64
 	db.Model(&models.WordPair{}).Count(&count)
 
-	// If words already exist, abort seeding to avoid duplicates.
 	if count > 0 {
 		log.Println("Word dictionary already populated. Skipping seed.")
 		return

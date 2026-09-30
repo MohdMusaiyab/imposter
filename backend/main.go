@@ -12,7 +12,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// CORSMiddleware authorizes cross-origin fetch protocols naturally
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
@@ -22,7 +21,7 @@ func CORSMiddleware() gin.HandlerFunc {
 			if origin == "http://localhost:3000" || origin == "http://localhost:3001" {
 				allowedOrigin = origin
 			} else {
-				allowedOrigin = "http://localhost:3000" // strict fallback
+				allowedOrigin = "http://localhost:3000"
 			}
 		}
 
@@ -31,7 +30,6 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
-		// Handle preflight requests
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
@@ -63,7 +61,7 @@ func main() {
 	r.GET("/ws/room/:roomId", handlers.ServeWS)
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "9999" // Safely moved off 8080 to prevent standard collisions
+		port = "9999"
 	}
 
 	log.Printf("Server starting on port %s", port)

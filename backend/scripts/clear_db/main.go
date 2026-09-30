@@ -5,17 +5,15 @@ import (
 	"os"
 
 	"imposter-backend/models"
-	
+
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
-	// Load the root .env file from the backend directory
 	err := godotenv.Load("../../.env")
 	if err != nil {
-		// Fallback to searching the current dir if run from root using `go run scripts/clear_db/main.go`
 		_ = godotenv.Load(".env")
 	}
 
@@ -30,8 +28,7 @@ func main() {
 	}
 
 	log.Println("🗑️  Dropping all game tables (WordPairs & MatchResults)...")
-	
-	// Drop tables forcefully to reset schemas entirely
+
 	err = db.Migrator().DropTable(&models.WordPair{}, &models.MatchResult{})
 	if err != nil {
 		log.Fatalf("❌ Error dropping tables: %v", err)

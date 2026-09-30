@@ -42,15 +42,24 @@ export function useGameSocket(roomId: string | null) {
     const connect = () => {
       const sessionStr = localStorage.getItem("imposter_session");
       if (!sessionStr) {
-        if (isMounted) setError("No valid game session found. Please return to the homepage.");
+        if (isMounted)
+          setError(
+            "No valid game session found. Please return to the homepage.",
+          );
         return;
       }
 
       const session = JSON.parse(sessionStr);
 
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.');
-      const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL || (isLocal ? `ws://${window.location.hostname}:9999` : 'wss://imposter-54yr.onrender.com');
-      
+      const isLocal =
+        window.location.hostname === "localhost" ||
+        window.location.hostname.startsWith("192.168.");
+      const wsBaseUrl =
+        process.env.NEXT_PUBLIC_WS_URL ||
+        (isLocal
+          ? `ws://${window.location.hostname}:9999`
+          : "wss://imposter-54yr.onrender.com");
+
       const wsUrl = `${wsBaseUrl}/ws/room/${roomId}?playerId=${session.playerId}&playerName=${encodeURIComponent(session.name)}`;
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
@@ -95,10 +104,13 @@ export function useGameSocket(roomId: string | null) {
 
         const baseDelay = 1000;
         const maxDelay = 15000;
-        const backoffDelay = Math.min(baseDelay * Math.pow(2, reconnectAttempts.current), maxDelay);
-        const jitter = Math.floor(Math.random() * 500); 
+        const backoffDelay = Math.min(
+          baseDelay * Math.pow(2, reconnectAttempts.current),
+          maxDelay,
+        );
+        const jitter = Math.floor(Math.random() * 500);
         const nextAttemptMs = backoffDelay + jitter;
-        
+
         reconnectAttempts.current++;
 
         reconnectTimeoutRef.current = setTimeout(() => {
@@ -114,7 +126,10 @@ export function useGameSocket(roomId: string | null) {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      if (
+        socketRef.current &&
+        socketRef.current.readyState === WebSocket.OPEN
+      ) {
         socketRef.current.close();
       }
       socketRef.current = null;

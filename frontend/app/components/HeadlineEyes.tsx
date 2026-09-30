@@ -2,21 +2,12 @@
 
 import React, { useRef, useState, useEffect } from "react";
 
-/**
- * Googly eyes that occupy the right portion of the headline card.
- * - All sizing is driven by a single CSS custom property `--eye-size`
- *   defined on `.headline-eyes-wrap`, making it fully responsive via CSS alone.
- * - The blink animation is pure CSS (no framer-motion), so `--eye-size`
- *   is respected at every breakpoint without JS intervention.
- * - Pupils track the cursor via inline transform only.
- */
 export default function HeadlineEyes() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    // Listen on the nearest .headline-card ancestor for hover/move
     const card =
       (containerRef.current?.closest(".headline-card") as HTMLElement) ??
       containerRef.current?.parentElement;
@@ -62,13 +53,17 @@ export default function HeadlineEyes() {
       <div className="headline-eye">
         <span
           className="headline-pupil"
-          style={{ transform: `translate(calc(-50% + ${px}%), calc(-50% + ${py}%))` }}
+          style={{
+            transform: `translate(calc(-50% + ${px}%), calc(-50% + ${py}%))`,
+          }}
         />
       </div>
       <div className="headline-eye blink-offset">
         <span
           className="headline-pupil"
-          style={{ transform: `translate(calc(-50% + ${px}%), calc(-50% + ${py}%))` }}
+          style={{
+            transform: `translate(calc(-50% + ${px}%), calc(-50% + ${py}%))`,
+          }}
         />
       </div>
     </div>

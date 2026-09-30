@@ -17,8 +17,8 @@ import (
 
 const (
 	pingInterval = 15 * time.Second
-	pongWait = 20 * time.Second
-	writeWait = 10 * time.Second
+	pongWait     = 20 * time.Second
+	writeWait    = 10 * time.Second
 )
 
 var upgrader = websocket.Upgrader{
@@ -29,7 +29,7 @@ var upgrader = websocket.Upgrader{
 		if allowedOrigin == "" {
 			return true
 		}
-		
+
 		origin := r.Header.Get("Origin")
 		return origin == allowedOrigin
 	},
@@ -38,22 +38,19 @@ var upgrader = websocket.Upgrader{
 var (
 	roomClients = make(map[string]map[string]*websocket.Conn)
 	connMutex   = sync.RWMutex{}
-	
-	// matchRecordWorker processes writes sequentially to protect the DB from spikes
+
 	matchRecordWorker = make(chan models.MatchResult, 100)
 )
 
 func init() {
 	go func() {
 		for res := range matchRecordWorker {
-			// Blocks sequentially protecting Render connections limits
 			if db.DB != nil {
 				db.DB.Create(&res)
 			}
 		}
 	}()
 }
-
 
 func ServeWS(c *gin.Context) {
 	roomID := c.Param("roomId")
@@ -101,7 +98,6 @@ func ServeWS(c *gin.Context) {
 	go writePump(conn, room, playerID)
 }
 
-// writePump runs the server-side ping heartbeat on its own goroutine.
 func writePump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
@@ -111,13 +107,11 @@ func writePump(conn *websocket.Conn, room *engine.Room, playerID string) {
 		return nil
 	})
 
-	// Set the initial read deadline so the very first silence is caught too.
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 
 	for {
 		<-ticker.C
 
-		// Check if this player is still registered (they may have left cleanly).
 		connMutex.RLock()
 		_, active := roomClients[room.ID][playerID]
 		connMutex.RUnlock()
@@ -127,7 +121,6 @@ func writePump(conn *websocket.Conn, room *engine.Room, playerID string) {
 
 		conn.SetWriteDeadline(time.Now().Add(writeWait))
 		if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-			// Client is dead — readPump will handle cleanup via its own error path.
 			return
 		}
 	}
@@ -135,7 +128,6 @@ func writePump(conn *websocket.Conn, room *engine.Room, playerID string) {
 
 func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	defer func() {
-		// Remove from the live connection map immediately on disconnect.
 		connMutex.Lock()
 		if roomClients[room.ID] != nil {
 			delete(roomClients[room.ID], playerID)
@@ -143,8 +135,6 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 		connMutex.Unlock()
 		conn.Close()
 
-		// Grace period: give the client 10 seconds to reconnect (e.g. page refresh)
-		// before treating the absence as a permanent leave.
 		go func() {
 			time.Sleep(10 * time.Second)
 			connMutex.RLock()
@@ -169,7 +159,6 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 			continue
 		}
 
-		// Check host status under a read lock before evaluating any action.
 		room.Mu.RLock()
 		isHost := false
 		if p, exists := room.Players[playerID]; exists && p.IsHost {
@@ -181,7 +170,7 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 		case "LEAVE_ROOM":
 			room.RemovePlayer(playerID)
 			broadcastStateToRoom(room)
-			return // defer handles WS teardown
+			return
 
 		case "CLOSE_ROOM":
 			if !isHost {
@@ -189,7 +178,6 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 			}
 			engine.Manager.RemoveRoom(room.ID)
 
-			// Snapshot connections before releasing the lock
 			connMutex.RLock()
 			conns := roomClients[room.ID]
 			activeConns := make([]*websocket.Conn, 0, len(conns))
@@ -208,14 +196,12 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 			if !isHost {
 				continue
 			}
-			
-			// Get all available word pair IDs efficiently
+
 			var allIDs []uint
 			if err := db.DB.Model(&models.WordPair{}).Pluck("id", &allIDs).Error; err != nil {
 				log.Printf("Failed to load word pairs: %v", err)
 			}
-			
-			// Filter out already used words for this room
+
 			var availableIDs []uint
 			room.Mu.RLock()
 			usedMap := make(map[uint]bool)
@@ -223,7 +209,7 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				usedMap[uID] = true
 			}
 			room.Mu.RUnlock()
-			
+
 			for _, id := range allIDs {
 				if !usedMap[id] {
 					availableIDs = append(availableIDs, id)
@@ -232,13 +218,10 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 
 			var wp models.WordPair
 			if len(availableIDs) == 0 {
-				// Fallback if we run out of words
 				wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
 			} else {
-				// Pick random securely in-memory
-				// Instead of complex RNG, let's just use map iteration randomness or basic length modulo
 				selectedID := availableIDs[time.Now().UnixNano()%int64(len(availableIDs))]
-				
+
 				if err := db.DB.First(&wp, selectedID).Error; err != nil {
 					wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
 				} else {
@@ -312,7 +295,6 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				targetId, _ := action["targetId"].(string)
 				room.ForceEliminate(targetId)
 
-				// Log FORCE_ELIMINATE match results (was previously missing)
 				room.Mu.RLock()
 				winner := room.Winner
 				totalPlayers := len(room.Players)
@@ -363,8 +345,6 @@ func mapRoomState(room *engine.Room, connectionPlayerID string) map[string]inter
 			"order":    p.Order,
 		}
 
-		// Only reveal secret info to the owning player, or when the round ends,
-		// or in single-device mode where everyone shares the same screen.
 		if id == connectionPlayerID || room.Phase == engine.PhaseResults || room.IsSingleDevice {
 			pub["Word"] = p.Word
 			pub["IsImposter"] = p.IsImposter
@@ -392,16 +372,12 @@ func broadcastStateToRoom(room *engine.Room) {
 		return
 	}
 
-	// Snapshot the connection map while the read lock is still held.
-	// Releasing the lock before iterating would allow concurrent writes to
-	// the inner map, triggering a fatal "concurrent map iteration and map write".
 	activeConns := make(map[string]*websocket.Conn, len(conns))
 	for pid, conn := range conns {
 		activeConns[pid] = conn
 	}
 	connMutex.RUnlock()
 
-	// Now it is safe to iterate our isolated copy without holding any lock.
 	for pid, conn := range activeConns {
 		conn.SetWriteDeadline(time.Now().Add(writeWait))
 		payload := mapRoomState(room, pid)

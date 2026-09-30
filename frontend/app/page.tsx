@@ -29,14 +29,27 @@ const roster = [
   { name: "ROSE", color: "#e8433a", left: 40, top: 6, rot: -3, word: "PIZZA" },
   { name: "COBALT", color: "#2f6fe4", left: 56, top: 2, rot: 2, word: "PIZZA" },
   { name: "MOSS", color: "#22a866", left: 70, top: 10, rot: -2, word: "PIZZA" },
-  { name: "AMBER", color: "#f0b429", left: 32, top: 33, rot: 4, word: "BURGER", isImposter: true },
-  { name: "CRIMSON", color: "#e8433a", left: 50, top: 39, rot: -3, word: "PIZZA" },
+  {
+    name: "AMBER",
+    color: "#f0b429",
+    left: 32,
+    top: 33,
+    rot: 4,
+    word: "BURGER",
+    isImposter: true,
+  },
+  {
+    name: "CRIMSON",
+    color: "#e8433a",
+    left: 50,
+    top: 39,
+    rot: -3,
+    word: "PIZZA",
+  },
   { name: "PLUM", color: "#8c5cd8", left: 65, top: 35, rot: 3, word: "PIZZA" },
   { name: "RUST", color: "#1fb3c7", left: 78, top: 29, rot: -4, word: "PIZZA" },
   { name: "CYAN", color: "#1fb3c7", left: 44, top: 21, rot: 2, word: "PIZZA" },
 ];
-
-
 
 export default function LandingPage() {
   const [flaggedIdx, setFlaggedIdx] = useState(-1);
@@ -45,7 +58,6 @@ export default function LandingPage() {
   const headlineRef = useRef<HTMLDivElement>(null);
   const suspectRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Draw SVG strings exactly like the original JS: read live DOM positions
   const drawStrings = () => {
     if (window.innerWidth <= 760 || !stageRef.current || !headlineRef.current) {
       setStringPaths("");
@@ -78,7 +90,7 @@ export default function LandingPage() {
   useEffect(() => {
     const t = setTimeout(drawStrings, 120);
     return () => clearTimeout(t);
-  }, []); // drawStrings is stable (no reactive deps) — intentional empty array
+  }, []);
 
   useEffect(() => {
     let resizeTimer: ReturnType<typeof setTimeout>;
@@ -88,10 +100,9 @@ export default function LandingPage() {
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []); // drawStrings is stable — intentional empty array
+  }, []);
 
   useEffect(() => {
-    // Flag a random suspect
     const flag = () => setFlaggedIdx(Math.floor(Math.random() * roster.length));
     const fTimer = setTimeout(flag, 1500);
     const fInt = setInterval(flag, 4000);
@@ -106,15 +117,11 @@ export default function LandingPage() {
     <section className={`board ${space.className}`}>
       <div className="board-lines" />
 
-      {/* NAV */}
       <nav className="nav">
-        {/* Multi-colour pencil logo */}
         <PencilLogo />
       </nav>
 
-      {/* STAGE */}
       <div className="stage" ref={stageRef}>
-        {/* SVG strings */}
         <svg
           className="strings"
           width="100%"
@@ -122,16 +129,22 @@ export default function LandingPage() {
           dangerouslySetInnerHTML={{ __html: stringPaths }}
         />
 
-
-        {/* Headline card */}
-        {/* Headline card */}
         <div className="headline-card" ref={headlineRef}>
           <span className="corner-tape a" />
           <span className="corner-tape b" />
-          
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className={`case-num ${mono.className}`}>GAME #0417 · OPEN</div>
+              <div className={`case-num ${mono.className}`}>
+                GAME #0417 · OPEN
+              </div>
               <h1 className={kalam.className} style={{ marginLeft: "6%" }}>
                 Find the{" "}
                 <span className="circle-word">
@@ -146,12 +159,11 @@ export default function LandingPage() {
                 closely — then call it.
               </p>
             </div>
-            
+
             <HeadlineEyes />
           </div>
         </div>
 
-        {/* Sticky note */}
         <div className={`sticky ${kalam.className}`}>
           <span className="pin" style={{ background: "#8c5cd8" }} />
           trust the tasks,
@@ -159,7 +171,6 @@ export default function LandingPage() {
           not the talking.
         </div>
 
-        {/* Suspects */}
         <div className="suspect-scatter" id="suspects">
           {roster.map((p, i) => (
             <div
@@ -181,12 +192,15 @@ export default function LandingPage() {
                 style={{ background: PIN_COLORS[i % PIN_COLORS.length] }}
               />
               <div className="photo">
-                <svg className="profile-icon" viewBox="0 0 24 24" style={{ stroke: p.color }}>
+                <svg
+                  className="profile-icon"
+                  viewBox="0 0 24 24"
+                  style={{ stroke: p.color }}
+                >
                   <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6Z" />
                 </svg>
                 <span className="redact" />
-                
-                {/* Word revealed inside the card on hover */}
+
                 <div className={`revealed-word ${mono.className}`}>
                   {p.word}
                   {p.isImposter && (
@@ -203,7 +217,6 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* CTA Dock */}
         <div className="cta-dock">
           <Link
             href="/room/create"
@@ -220,7 +233,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Developer Footer */}
       <footer
         className={mono.className}
         style={{

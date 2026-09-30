@@ -6,9 +6,15 @@ import PencilLogo from "@/app/components/PencilLogo";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 
-const space = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"] });
+const space = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
 const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"] });
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
 
 export default function JoinRoom() {
   const router = useRouter();
@@ -52,7 +58,14 @@ export default function JoinRoom() {
       <div className="board-lines" />
 
       <nav className="nav">
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
           <PencilLogo />
           <Link
             href="/"
@@ -63,7 +76,7 @@ export default function JoinRoom() {
               letterSpacing: "0.5px",
               borderBottom: "1px dashed #77788a",
               paddingBottom: 2,
-              textDecoration: "none"
+              textDecoration: "none",
             }}
           >
             ← BACK TO HOME
@@ -100,13 +113,20 @@ export default function JoinRoom() {
           <span className="corner-tape a" />
           <span className="corner-tape b" />
 
-          <div className={`case-num ${mono.className}`} style={{ marginBottom: 20 }}>
+          <div
+            className={`case-num ${mono.className}`}
+            style={{ marginBottom: 20 }}
+          >
             FORM B-1 · JOIN ROOM
           </div>
 
           <h1
             className={kalam.className}
-            style={{ fontSize: "clamp(1.7rem, 5vw, 2.4rem)", marginBottom: 6, lineHeight: 1.2 }}
+            style={{
+              fontSize: "clamp(1.7rem, 5vw, 2.4rem)",
+              marginBottom: 6,
+              lineHeight: 1.2,
+            }}
           >
             Join a Game
           </h1>
@@ -117,11 +137,20 @@ export default function JoinRoom() {
             Enter the room code and your alias to join.
           </p>
 
-          <form onSubmit={handleJoin} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <form
+            onSubmit={handleJoin}
+            style={{ display: "flex", flexDirection: "column", gap: 20 }}
+          >
             <div>
               <label
                 className={mono.className}
-                style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  letterSpacing: "0.8px",
+                  color: "#77788a",
+                  marginBottom: 8,
+                }}
               >
                 ROOM CODE
               </label>
@@ -132,7 +161,12 @@ export default function JoinRoom() {
                 placeholder="e.g. XYZ123"
                 required
                 maxLength={10}
-                style={{ ...fieldStyle, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "3px", fontSize: 18 }}
+                style={{
+                  ...fieldStyle,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  letterSpacing: "3px",
+                  fontSize: 18,
+                }}
                 onFocus={(e) => (e.target.style.borderColor = "#e8433a")}
                 onBlur={(e) => (e.target.style.borderColor = "#e9e9ee")}
               />
@@ -141,7 +175,13 @@ export default function JoinRoom() {
             <div>
               <label
                 className={mono.className}
-                style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  letterSpacing: "0.8px",
+                  color: "#77788a",
+                  marginBottom: 8,
+                }}
               >
                 YOUR ALIAS
               </label>
@@ -174,21 +214,33 @@ export default function JoinRoom() {
                 transition: "all .18s",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform = "translate(-2px,-2px)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "6px 6px 0 #16161a";
+                (e.currentTarget as HTMLButtonElement).style.transform =
+                  "translate(-2px,-2px)";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  "6px 6px 0 #16161a";
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.transform = "";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "4px 4px 0 #16161a";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  "4px 4px 0 #16161a";
               }}
             >
               ENTER THE ROOM →
             </button>
           </form>
 
-          {/* Divider + create link */}
-          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid #e9e9ee", textAlign: "center" }}>
-            <span className={mono.className} style={{ fontSize: 11, color: "#77788a" }}>
+          <div
+            style={{
+              marginTop: 24,
+              paddingTop: 20,
+              borderTop: "1px solid #e9e9ee",
+              textAlign: "center",
+            }}
+          >
+            <span
+              className={mono.className}
+              style={{ fontSize: 11, color: "#77788a" }}
+            >
               DON&apos;T HAVE A CODE?{" "}
             </span>
             <Link

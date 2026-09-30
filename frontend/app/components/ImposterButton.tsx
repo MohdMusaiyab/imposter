@@ -3,19 +3,13 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 
-interface ImposterButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ImposterButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   fontClassName?: string;
 }
 
 type Coords = { x: number; y: number };
 
-/**
- * The word "imposter" with googly eyes peeking just above it.
- * On hover the word wiggles guiltily and turns red.
- * Pupils track the cursor in real time.
- */
 export default function ImposterButton({
   children,
   fontClassName,
@@ -94,7 +88,7 @@ export default function ImposterButton({
       }}
       {...props}
     >
-      {/* The word — flushes red on hover, no more tilt/wiggle */}
+      {}
       <motion.span
         className={fontClassName}
         style={{
@@ -115,7 +109,7 @@ export default function ImposterButton({
         {children}
       </motion.span>
 
-      {/* Eyes — float just to the right of the word, only visible on hover */}
+      {}
       <span
         ref={eyesRef}
         aria-hidden="true"
@@ -123,7 +117,7 @@ export default function ImposterButton({
           position: "absolute",
           left: "100%",
           top: "50%",
-          transform: "translate(0.1em, -50%)", // slightly offset to the right
+          transform: "translate(0.1em, -50%)",
           display: "flex",
           alignItems: "center",
           gap: "0.28em",
@@ -134,7 +128,7 @@ export default function ImposterButton({
           transition: "opacity 0.2s ease-in-out",
         }}
       >
-        {/* Left eye */}
+        {}
         <motion.span
           style={{
             position: "relative",
@@ -168,7 +162,7 @@ export default function ImposterButton({
           />
         </motion.span>
 
-        {/* Right eye */}
+        {}
         <motion.span
           style={{
             position: "relative",

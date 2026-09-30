@@ -7,11 +7,16 @@ import type { GameState, Player } from "@/hooks/useGameSocket";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 
-const space = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"] });
+const space = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
 const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"] });
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
 
-// ─── Shared style helpers ────────────────────────────────────────────────────
 const cardStyle: React.CSSProperties = {
   background: "#fff",
   border: "1.5px solid #16161a",
@@ -73,7 +78,6 @@ const tagStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-// ─── Wrapper ────────────────────────────────────────────────────────────────
 export default function GameRoomWrapper({
   params,
 }: {
@@ -83,7 +87,6 @@ export default function GameRoomWrapper({
   return <GameRoom roomId={resolvedParams.id} />;
 }
 
-// ─── Main room shell ─────────────────────────────────────────────────────────
 function GameRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
   const { gameState, isConnected, error, sendAction } = useGameSocket(roomId);
@@ -97,24 +100,49 @@ function GameRoom({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // ── Error screen ──
   if (error) {
     return (
       <div
         className={`board ${space.className}`}
-        style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center" }}
+        style={{
+          minHeight: "100svh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         <div className="board-lines" />
-        <div style={{ ...cardStyle, maxWidth: 420, textAlign: "center", transform: "rotate(-1deg)" }}>
+        <div
+          style={{
+            ...cardStyle,
+            maxWidth: 420,
+            textAlign: "center",
+            transform: "rotate(-1deg)",
+          }}
+        >
           <span className="corner-tape a" />
           <div
             className={mono.className}
-            style={{ fontSize: 11, letterSpacing: 1, color: "#e8433a", border: "1px solid #e8433a", padding: "3px 9px", display: "inline-block", marginBottom: 16 }}
+            style={{
+              fontSize: 11,
+              letterSpacing: 1,
+              color: "#e8433a",
+              border: "1px solid #e8433a",
+              padding: "3px 9px",
+              display: "inline-block",
+              marginBottom: 16,
+            }}
           >
             GAME OVER · CONNECTION LOST
           </div>
-          <p style={{ color: "#77788a", marginBottom: 24, fontSize: 14 }}>{error}</p>
-          <Link href="/" className={`btn btn-primary ${space.className}`} style={{ display: "inline-block" }}>
+          <p style={{ color: "#77788a", marginBottom: 24, fontSize: 14 }}>
+            {error}
+          </p>
+          <Link
+            href="/"
+            className={`btn btn-primary ${space.className}`}
+            style={{ display: "inline-block" }}
+          >
             RETURN HOME
           </Link>
         </div>
@@ -122,16 +150,20 @@ function GameRoom({ roomId }: { roomId: string }) {
     );
   }
 
-  // ── Loading screen ──
   if (!isConnected || !gameState) {
     return (
       <div
         className={`board ${space.className}`}
-        style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center" }}
+        style={{
+          minHeight: "100svh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         <div className="board-lines" />
         <div style={{ textAlign: "center" }}>
-          {/* animated spinner made of border */}
+          {}
           <div
             style={{
               width: 44,
@@ -144,7 +176,10 @@ function GameRoom({ roomId }: { roomId: string }) {
             }}
           />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          <p className={mono.className} style={{ fontSize: 11, letterSpacing: "1.5px", color: "#77788a" }}>
+          <p
+            className={mono.className}
+            style={{ fontSize: 11, letterSpacing: "1.5px", color: "#77788a" }}
+          >
             SYNCING SECURE CONNECTION...
           </p>
         </div>
@@ -168,9 +203,17 @@ function GameRoom({ roomId }: { roomId: string }) {
         );
       case "REVEAL":
         return gameState.IsSingleDevice ? (
-          <RevealViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
+          <RevealViewSingleDevice
+            gameState={gameState}
+            isHost={isHost}
+            sendAction={sendAction}
+          />
         ) : (
-          <RevealView currentPlayer={currentPlayer} isHost={isHost} sendAction={sendAction} />
+          <RevealView
+            currentPlayer={currentPlayer}
+            isHost={isHost}
+            sendAction={sendAction}
+          />
         );
       case "DISCUSSION":
         return (
@@ -182,7 +225,11 @@ function GameRoom({ roomId }: { roomId: string }) {
         );
       case "VOTING":
         return gameState.IsSingleDevice ? (
-          <VotingViewSingleDevice gameState={gameState} isHost={isHost} sendAction={sendAction} />
+          <VotingViewSingleDevice
+            gameState={gameState}
+            isHost={isHost}
+            sendAction={sendAction}
+          />
         ) : (
           <VotingView
             gameState={gameState}
@@ -202,7 +249,10 @@ function GameRoom({ roomId }: { roomId: string }) {
         );
       default:
         return (
-          <p className={mono.className} style={{ color: "#e8433a", fontSize: 13 }}>
+          <p
+            className={mono.className}
+            style={{ color: "#e8433a", fontSize: 13 }}
+          >
             Unknown game phase.
           </p>
         );
@@ -216,7 +266,7 @@ function GameRoom({ roomId }: { roomId: string }) {
     >
       <div className="board-lines" />
 
-      {/* Header bar */}
+      {}
       <header
         style={{
           position: "relative",
@@ -231,7 +281,7 @@ function GameRoom({ roomId }: { roomId: string }) {
           borderBottom: "1.5px solid #e9e9ee",
         }}
       >
-        {/* Left: logo + room id */}
+        {}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div className="logo">
             <span className={`badge-icon ${mono.className}`}>3</span>
@@ -248,12 +298,21 @@ function GameRoom({ roomId }: { roomId: string }) {
             }}
           >
             ROOM{" "}
-            <span style={{ color: "#e8433a", fontWeight: 600 }}>#{gameState.ID}</span>
+            <span style={{ color: "#e8433a", fontWeight: 600 }}>
+              #{gameState.ID}
+            </span>
           </div>
         </div>
 
-        {/* Right: phase badge + player info + leave */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        {}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
           <span
             className={mono.className}
             style={{
@@ -303,7 +362,10 @@ function GameRoom({ roomId }: { roomId: string }) {
           )}
 
           <button
-            onClick={() => { sendAction("LEAVE_ROOM"); router.push("/"); }}
+            onClick={() => {
+              sendAction("LEAVE_ROOM");
+              router.push("/");
+            }}
             className={mono.className}
             style={{
               fontSize: 11,
@@ -322,7 +384,7 @@ function GameRoom({ roomId }: { roomId: string }) {
         </div>
       </header>
 
-      {/* Phase content */}
+      {}
       <div
         style={{
           flex: 1,
@@ -340,9 +402,6 @@ function GameRoom({ roomId }: { roomId: string }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// LOBBY VIEW
-// ─────────────────────────────────────────────
 function LobbyView({
   gameState,
   isHost,
@@ -354,33 +413,57 @@ function LobbyView({
   localPlayerId: string;
   sendAction: (type: string, payload?: Record<string, unknown>) => void;
 }) {
-  const players = Object.values(gameState.Players).sort((a, b) => a.order - b.order);
+  const players = Object.values(gameState.Players).sort(
+    (a, b) => a.order - b.order,
+  );
   const [newLocalName, setNewLocalName] = useState("");
 
   const handleAddLocalPlayer = () => {
     if (!newLocalName.trim()) return;
-    sendAction("ADD_LOCAL_PLAYER", { id: crypto.randomUUID(), name: newLocalName.trim() });
+    sendAction("ADD_LOCAL_PLAYER", {
+      id: crypto.randomUUID(),
+      name: newLocalName.trim(),
+    });
     setNewLocalName("");
   };
 
   return (
     <div style={{ ...cardStyle, maxWidth: 680 }}>
-      {/* Tape accents */}
+      {}
       <span className="corner-tape a" />
       <span className="corner-tape b" />
 
-      <div className={mono.className} style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 6 }}>
+      <div
+        className={mono.className}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#77788a",
+          marginBottom: 6,
+        }}
+      >
         ROOM STATUS · GATHERING PERSONNEL
       </div>
       <h2
         className={kalam.className}
-        style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", marginBottom: 24, color: "#16161a" }}
+        style={{
+          fontSize: "clamp(1.6rem,4vw,2.2rem)",
+          marginBottom: 24,
+          color: "#16161a",
+        }}
       >
         Lobby
       </h2>
 
-      {/* Player grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10, marginBottom: 24 }}>
+      {}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
+          gap: 10,
+          marginBottom: 24,
+        }}
+      >
         {players.map((p, i) => {
           const isMe = p.id === localPlayerId;
           return (
@@ -444,7 +527,7 @@ function LobbyView({
           );
         })}
 
-        {/* Add local player input (hotseat) */}
+        {}
         {gameState.IsSingleDevice && isHost && (
           <div
             style={{
@@ -492,12 +575,25 @@ function LobbyView({
         )}
       </div>
 
-      {/* Actions */}
-      <div style={{ borderTop: "1px solid #e9e9ee", paddingTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+      {}
+      <div
+        style={{
+          borderTop: "1px solid #e9e9ee",
+          paddingTop: 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
         {!isHost ? (
           <p
             className={mono.className}
-            style={{ textAlign: "center", fontSize: 12, color: "#77788a", letterSpacing: "0.5px" }}
+            style={{
+              textAlign: "center",
+              fontSize: 12,
+              color: "#77788a",
+              letterSpacing: "0.5px",
+            }}
           >
             Waiting for the host to start the game...
           </p>
@@ -534,9 +630,6 @@ function LobbyView({
   );
 }
 
-// ─────────────────────────────────────────────
-// DISCUSSION VIEW
-// ─────────────────────────────────────────────
 function DiscussionView({
   currentPlayer,
   isHost,
@@ -559,18 +652,34 @@ function DiscussionView({
 
       <div
         className={mono.className}
-        style={{ fontSize: 11, letterSpacing: "1px", color: "#e8433a", marginBottom: 12 }}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#e8433a",
+          marginBottom: 12,
+        }}
       >
         PHASE · LIVE DISCUSSION
       </div>
 
       <h2
         className={kalam.className}
-        style={{ fontSize: "clamp(1.8rem,4.5vw,2.6rem)", marginBottom: 10, color: "#16161a" }}
+        style={{
+          fontSize: "clamp(1.8rem,4.5vw,2.6rem)",
+          marginBottom: 10,
+          color: "#16161a",
+        }}
       >
         Talk it out.
       </h2>
-      <p style={{ color: "#77788a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
+      <p
+        style={{
+          color: "#77788a",
+          fontSize: 15,
+          marginBottom: 28,
+          lineHeight: 1.6,
+        }}
+      >
         Find the imposter. No time limit — discuss freely.
       </p>
 
@@ -613,9 +722,6 @@ function DiscussionView({
   );
 }
 
-// ─────────────────────────────────────────────
-// RESULTS VIEW
-// ─────────────────────────────────────────────
 function ResultsView({
   gameState,
   isHost,
@@ -636,19 +742,28 @@ function ResultsView({
 
       <div
         className={mono.className}
-        style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 12 }}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#77788a",
+          marginBottom: 12,
+        }}
       >
         {gameContinues ? "ROUND COMPLETE" : "GAME OVER"}
       </div>
 
       <h2
         className={kalam.className}
-        style={{ fontSize: "clamp(1.8rem,4vw,2.4rem)", marginBottom: 20, color: "#16161a" }}
+        style={{
+          fontSize: "clamp(1.8rem,4vw,2.4rem)",
+          marginBottom: 20,
+          color: "#16161a",
+        }}
       >
         {gameContinues ? "Round Over." : "Game Over."}
       </h2>
 
-      {/* Eliminated player */}
+      {}
       <div
         style={{
           padding: "14px 16px",
@@ -661,7 +776,10 @@ function ResultsView({
           gap: 10,
         }}
       >
-        <span className={mono.className} style={{ fontSize: 11, color: "#e8433a" }}>
+        <span
+          className={mono.className}
+          style={{ fontSize: 11, color: "#e8433a" }}
+        >
           ELIMINATED
         </span>
         <span style={{ fontWeight: 700, fontSize: 16, color: "#16161a" }}>
@@ -669,7 +787,7 @@ function ResultsView({
         </span>
       </div>
 
-      {/* Winner banner */}
+      {}
       {!gameContinues && (
         <div
           style={{
@@ -694,11 +812,16 @@ function ResultsView({
         </div>
       )}
 
-      {/* Scoreboard */}
+      {}
       <div style={{ marginBottom: 24 }}>
         <p
           className={mono.className}
-          style={{ fontSize: 10, letterSpacing: "1px", color: "#77788a", marginBottom: 10 }}
+          style={{
+            fontSize: 10,
+            letterSpacing: "1px",
+            color: "#77788a",
+            marginBottom: 10,
+          }}
         >
           STANDINGS
         </p>
@@ -720,7 +843,9 @@ function ResultsView({
                     borderRadius: 3,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
                     <span
                       className={mono.className}
                       style={{ fontSize: 9, color: "#77788a", minWidth: 20 }}
@@ -737,7 +862,14 @@ function ResultsView({
                     >
                       {p.name}
                       {isMe && (
-                        <span className={mono.className} style={{ fontSize: 9, color: "#77788a", marginLeft: 6 }}>
+                        <span
+                          className={mono.className}
+                          style={{
+                            fontSize: 9,
+                            color: "#77788a",
+                            marginLeft: 6,
+                          }}
+                        >
                           (YOU)
                         </span>
                       )}
@@ -757,7 +889,9 @@ function ResultsView({
                       </span>
                     )}
                   </div>
-                  <span style={{ fontWeight: 700, color: "#8c5cd8", fontSize: 15 }}>
+                  <span
+                    style={{ fontWeight: 700, color: "#8c5cd8", fontSize: 15 }}
+                  >
                     {p.score} pts
                   </span>
                 </div>
@@ -768,7 +902,9 @@ function ResultsView({
 
       {isHost && (
         <button
-          onClick={() => sendAction(gameContinues ? "CONTINUE_DISCUSSION" : "NEXT_ROUND")}
+          onClick={() =>
+            sendAction(gameContinues ? "CONTINUE_DISCUSSION" : "NEXT_ROUND")
+          }
           style={btnPrimary}
           className={space.className}
         >
@@ -779,9 +915,6 @@ function ResultsView({
   );
 }
 
-// ─────────────────────────────────────────────
-// MULTI-DEVICE: REVEAL VIEW
-// ─────────────────────────────────────────────
 function RevealView({
   currentPlayer,
   isHost,
@@ -794,13 +927,24 @@ function RevealView({
   if (!currentPlayer) return null;
 
   return (
-    <div style={{ ...cardStyle, textAlign: "center", transform: "rotate(-0.5deg)" }}>
+    <div
+      style={{
+        ...cardStyle,
+        textAlign: "center",
+        transform: "rotate(-0.5deg)",
+      }}
+    >
       <span className="corner-tape a" />
       <span className="corner-tape b" />
 
       <div
         className={mono.className}
-        style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 16 }}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#77788a",
+          marginBottom: 16,
+        }}
       >
         EYES ONLY · YOUR SECRET WORD
       </div>
@@ -818,19 +962,32 @@ function RevealView({
           >
             <span
               className={kalam.className}
-              style={{ fontSize: "clamp(2.2rem,8vw,3.5rem)", fontWeight: 700, color: "#e8433a" }}
+              style={{
+                fontSize: "clamp(2.2rem,8vw,3.5rem)",
+                fontWeight: 700,
+                color: "#e8433a",
+              }}
             >
               {currentPlayer.Word ?? "—"}
             </span>
           </div>
-          <button onClick={() => sendAction("MARK_READY")} style={btnPrimary} className={space.className}>
+          <button
+            onClick={() => sendAction("MARK_READY")}
+            style={btnPrimary}
+            className={space.className}
+          >
             I MEMORIZED IT ✓
           </button>
         </>
       ) : (
         <p
           className={mono.className}
-          style={{ fontSize: 13, color: "#77788a", padding: "30px 0", letterSpacing: "0.5px" }}
+          style={{
+            fontSize: 13,
+            color: "#77788a",
+            padding: "30px 0",
+            letterSpacing: "0.5px",
+          }}
         >
           Waiting for all players to confirm...
         </p>
@@ -849,9 +1006,6 @@ function RevealView({
   );
 }
 
-// ─────────────────────────────────────────────
-// MULTI-DEVICE: VOTING VIEW
-// ─────────────────────────────────────────────
 function VotingView({
   gameState,
   currentPlayer,
@@ -884,13 +1038,22 @@ function VotingView({
 
       <div
         className={mono.className}
-        style={{ fontSize: 11, letterSpacing: "1px", color: "#e8433a", marginBottom: 16 }}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#e8433a",
+          marginBottom: 16,
+        }}
       >
         PHASE · CAST YOUR VOTE
       </div>
       <h2
         className={kalam.className}
-        style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", marginBottom: 20, color: "#16161a" }}
+        style={{
+          fontSize: "clamp(1.6rem,4vw,2.2rem)",
+          marginBottom: 20,
+          color: "#16161a",
+        }}
       >
         Who&apos;s the imposter?
       </h2>
@@ -905,7 +1068,9 @@ function VotingView({
             borderRadius: 3,
           }}
         >
-          <p style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Vote locked in.</p>
+          <p style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+            Vote locked in.
+          </p>
           <p
             className={mono.className}
             style={{ fontSize: 12, color: "#77788a" }}
@@ -987,9 +1152,6 @@ function VotingView({
   );
 }
 
-// ─────────────────────────────────────────────
-// HOTSEAT: REVEAL VIEW
-// ─────────────────────────────────────────────
 function RevealViewSingleDevice({
   gameState,
   isHost,
@@ -1018,7 +1180,11 @@ function RevealViewSingleDevice({
           All players initialized.
         </h2>
         {isHost && (
-          <button onClick={() => sendAction("CONTINUE_DISCUSSION")} style={btnPrimary} className={space.className}>
+          <button
+            onClick={() => sendAction("CONTINUE_DISCUSSION")}
+            style={btnPrimary}
+            className={space.className}
+          >
             BEGIN DISCUSSION →
           </button>
         )}
@@ -1027,25 +1193,40 @@ function RevealViewSingleDevice({
   }
 
   return (
-    <div style={{ ...cardStyle, textAlign: "center", transform: "rotate(-0.6deg)" }}>
+    <div
+      style={{
+        ...cardStyle,
+        textAlign: "center",
+        transform: "rotate(-0.6deg)",
+      }}
+    >
       <span className="corner-tape a" />
       <span className="corner-tape b" />
 
       <div
         className={mono.className}
-        style={{ fontSize: 11, letterSpacing: "1px", color: "#77788a", marginBottom: 8 }}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#77788a",
+          marginBottom: 8,
+        }}
       >
         HOTSEAT HANDOFF
       </div>
       <h2
         className={kalam.className}
-        style={{ fontSize: "clamp(1.4rem,4vw,2rem)", marginBottom: 24, color: "#16161a" }}
+        style={{
+          fontSize: "clamp(1.4rem,4vw,2rem)",
+          marginBottom: 24,
+          color: "#16161a",
+        }}
       >
         Pass the device to{" "}
         <span style={{ color: "#8c5cd8" }}>{currentSeat.name}</span>
       </h2>
 
-      {/* Word box */}
+      {}
       <div
         style={{
           padding: "28px 20px",
@@ -1062,7 +1243,11 @@ function RevealViewSingleDevice({
         {showWord ? (
           <span
             className={kalam.className}
-            style={{ fontSize: "clamp(2rem,7vw,3rem)", fontWeight: 700, color: "#e8433a" }}
+            style={{
+              fontSize: "clamp(2rem,7vw,3rem)",
+              fontWeight: 700,
+              color: "#e8433a",
+            }}
           >
             {currentSeat.Word ?? "—"}
           </span>
@@ -1078,7 +1263,10 @@ function RevealViewSingleDevice({
 
       {showWord ? (
         <button
-          onClick={() => { setShowWord(false); setCurrentIndex((c) => c + 1); }}
+          onClick={() => {
+            setShowWord(false);
+            setCurrentIndex((c) => c + 1);
+          }}
           style={btnPrimary}
           className={space.className}
         >
@@ -1107,9 +1295,6 @@ function RevealViewSingleDevice({
   );
 }
 
-// ─────────────────────────────────────────────
-// HOTSEAT: VOTING VIEW
-// ─────────────────────────────────────────────
 function VotingViewSingleDevice({
   gameState,
   isHost,
@@ -1122,18 +1307,33 @@ function VotingViewSingleDevice({
   const [selectedId, setSelectedId] = useState<string>("");
 
   return (
-    <div style={{ ...cardStyle, borderLeft: "5px solid #e8433a", transform: "rotate(0.3deg)" }}>
+    <div
+      style={{
+        ...cardStyle,
+        borderLeft: "5px solid #e8433a",
+        transform: "rotate(0.3deg)",
+      }}
+    >
       <span className="corner-tape a" />
 
       <div
         className={mono.className}
-        style={{ fontSize: 11, letterSpacing: "1px", color: "#e8433a", marginBottom: 16 }}
+        style={{
+          fontSize: 11,
+          letterSpacing: "1px",
+          color: "#e8433a",
+          marginBottom: 16,
+        }}
       >
         PHASE · PUBLIC CONSENSUS VOTE
       </div>
       <h2
         className={kalam.className}
-        style={{ fontSize: "clamp(1.6rem,4vw,2.2rem)", marginBottom: 8, color: "#16161a" }}
+        style={{
+          fontSize: "clamp(1.6rem,4vw,2.2rem)",
+          marginBottom: 8,
+          color: "#16161a",
+        }}
       >
         Who&apos;s the imposter?
       </h2>
@@ -1183,7 +1383,9 @@ function VotingViewSingleDevice({
       {isHost && (
         <>
           <button
-            onClick={() => sendAction("FORCE_ELIMINATE", { targetId: selectedId })}
+            onClick={() =>
+              sendAction("FORCE_ELIMINATE", { targetId: selectedId })
+            }
             disabled={!selectedId}
             style={{
               ...btnPrimary,

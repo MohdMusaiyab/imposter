@@ -6,9 +6,15 @@ import PencilLogo from "@/app/components/PencilLogo";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 
-const space = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"] });
+const space = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
 const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"] });
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
 
 export default function CreateRoom() {
   const router = useRouter();
@@ -73,12 +79,17 @@ export default function CreateRoom() {
       className={`board ${space.className}`}
       style={{ minHeight: "100svh", display: "flex", flexDirection: "column" }}
     >
-      {/* Grid background */}
       <div className="board-lines" />
 
-      {/* Nav */}
       <nav className="nav">
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
           <PencilLogo />
           <Link
             href="/"
@@ -89,7 +100,7 @@ export default function CreateRoom() {
               letterSpacing: "0.5px",
               borderBottom: "1px dashed #77788a",
               paddingBottom: 2,
-              textDecoration: "none"
+              textDecoration: "none",
             }}
           >
             ← BACK TO HOME
@@ -97,13 +108,11 @@ export default function CreateRoom() {
         </div>
       </nav>
 
-      {/* APB tag */}
       <div className={`apb-tag ${mono.className}`}>
         <span className="dot" />
         INCIDENT REPORT — HOST A GAME
       </div>
 
-      {/* Form card */}
       <div
         style={{
           flex: 1,
@@ -125,18 +134,23 @@ export default function CreateRoom() {
             transform: "rotate(-0.5deg)",
           }}
         >
-          {/* Corner tapes */}
           <span className="corner-tape a" />
           <span className="corner-tape b" />
 
-          {/* Game label */}
-          <div className={`case-num ${mono.className}`} style={{ marginBottom: 20 }}>
+          <div
+            className={`case-num ${mono.className}`}
+            style={{ marginBottom: 20 }}
+          >
             FORM A-1 · CREATE ROOM
           </div>
 
           <h1
             className={kalam.className}
-            style={{ fontSize: "clamp(1.7rem, 5vw, 2.4rem)", marginBottom: 6, lineHeight: 1.2 }}
+            style={{
+              fontSize: "clamp(1.7rem, 5vw, 2.4rem)",
+              marginBottom: 6,
+              lineHeight: 1.2,
+            }}
           >
             Host a Game
           </h1>
@@ -147,12 +161,20 @@ export default function CreateRoom() {
             Configure your room. Players will join using the room code.
           </p>
 
-          <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* Player name */}
+          <form
+            onSubmit={handleCreate}
+            style={{ display: "flex", flexDirection: "column", gap: 20 }}
+          >
             <div>
               <label
                 className={mono.className}
-                style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  letterSpacing: "0.8px",
+                  color: "#77788a",
+                  marginBottom: 8,
+                }}
               >
                 YOUR ALIAS
               </label>
@@ -179,15 +201,26 @@ export default function CreateRoom() {
               />
             </div>
 
-            {/* Device mode */}
             <div>
               <label
                 className={mono.className}
-                style={{ display: "block", fontSize: 11, letterSpacing: "0.8px", color: "#77788a", marginBottom: 8 }}
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  letterSpacing: "0.8px",
+                  color: "#77788a",
+                  marginBottom: 8,
+                }}
               >
                 DEVICE MODE
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
                 {[
                   { label: "📡 Multi-Device", val: false },
                   { label: "📱 Single Device", val: true },
@@ -202,7 +235,8 @@ export default function CreateRoom() {
                       fontWeight: 600,
                       fontFamily: "inherit",
                       border: "1.5px solid",
-                      borderColor: isSingleDevice === val ? "#16161a" : "#e9e9ee",
+                      borderColor:
+                        isSingleDevice === val ? "#16161a" : "#e9e9ee",
                       background: isSingleDevice === val ? "#16161a" : "#fff",
                       color: isSingleDevice === val ? "#fff" : "#77788a",
                       borderRadius: 3,
@@ -224,11 +258,16 @@ export default function CreateRoom() {
               </p>
             </div>
 
-
             {err && (
               <p
                 className={mono.className}
-                style={{ fontSize: 12, color: "#e8433a", padding: "8px 12px", border: "1px solid #e8433a", borderRadius: 3 }}
+                style={{
+                  fontSize: 12,
+                  color: "#e8433a",
+                  padding: "8px 12px",
+                  border: "1px solid #e8433a",
+                  borderRadius: 3,
+                }}
               >
                 {err}
               </p>
@@ -254,13 +293,17 @@ export default function CreateRoom() {
               }}
               onMouseEnter={(e) => {
                 if (!loading) {
-                  (e.currentTarget as HTMLButtonElement).style.transform = "translate(-2px,-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "6px 6px 0 #16161a";
+                  (e.currentTarget as HTMLButtonElement).style.transform =
+                    "translate(-2px,-2px)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "6px 6px 0 #16161a";
                 }
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.transform = "";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = loading ? "none" : "4px 4px 0 #16161a";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = loading
+                  ? "none"
+                  : "4px 4px 0 #16161a";
               }}
             >
               {loading ? "STARTING GAME..." : "HOST GAME →"}

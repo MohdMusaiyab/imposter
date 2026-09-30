@@ -11,12 +11,8 @@ import (
 )
 
 const (
-	// roomTTL is how long a room can be completely idle before the cleanup
-	// goroutine evicts it from memory. Prevents the server from leaking RAM
-	// indefinitely from abandoned lobbies.
 	roomTTL = 60 * time.Minute
 
-	// cleanupInterval is how often the sweep goroutine wakes up to check.
 	cleanupInterval = 10 * time.Minute
 )
 
@@ -29,9 +25,6 @@ var Manager = &GlobalManager{
 	rooms: make(map[string]*Room),
 }
 
-// StartCleanup launches a background goroutine that periodically evicts
-// rooms that have had no activity for longer than roomTTL.
-// Call this once from main() after the server initialises.
 func (m *GlobalManager) StartCleanup() {
 	go func() {
 		ticker := time.NewTicker(cleanupInterval)
@@ -45,7 +38,6 @@ func (m *GlobalManager) StartCleanup() {
 func (m *GlobalManager) sweepIdleRooms() {
 	now := time.Now()
 
-	// Collect candidates under a read lock first to minimise write-lock contention.
 	m.mu.RLock()
 	var stale []string
 	for id, room := range m.rooms {
@@ -77,15 +69,11 @@ func (m *GlobalManager) CreateRoom(isPrivate, isSingleDevice bool) *Room {
 	defer m.mu.Unlock()
 
 	code := generateRoomCode()
-	// Collision loop is safe because the code space is 16M combinations.
-	// The FALLBK guard in generateRoomCode prevents an infinite loop on
-	// crypto/rand failure — although that case should never arise in practice.
 	attempts := 0
 	for m.rooms[code] != nil {
 		code = generateRoomCode()
 		attempts++
 		if attempts > 100 {
-			// Pathological case: break to avoid spinning. Error handled upstream.
 			break
 		}
 	}
@@ -120,9 +108,6 @@ func (m *GlobalManager) RemoveRoom(id string) {
 	delete(m.rooms, id)
 }
 
-// GetPublicRooms returns joinable public lobbies.
-// Acquires room.Mu.RLock() before reading room.Players to eliminate the data
-// race that existed when the old code read len(room.Players) without a lock.
 func (m *GlobalManager) GetPublicRooms() []map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -130,7 +115,6 @@ func (m *GlobalManager) GetPublicRooms() []map[string]interface{} {
 	var public []map[string]interface{}
 	for _, room := range m.rooms {
 		if !room.IsPrivate && room.Phase == PhaseLobby {
-			// Must acquire room-level lock before reading the Players map.
 			room.Mu.RLock()
 			count := len(room.Players)
 			room.Mu.RUnlock()
@@ -144,9 +128,6 @@ func (m *GlobalManager) GetPublicRooms() []map[string]interface{} {
 	return public
 }
 
-// generateRoomCode produces a 6-character uppercase hex room code.
-// Falls back to a fixed string on crypto/rand failure; the collision loop
-// in CreateRoom is capped at 100 attempts to prevent an infinite spin.
 func generateRoomCode() string {
 	b := make([]byte, 3)
 	if _, err := rand.Read(b); err != nil {

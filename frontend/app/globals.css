@@ -1,19 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --board:    #ffffff;
-  --ink:      #16161a;
+  --board: #ffffff;
+  --ink: #16161a;
   --ink-soft: #77788a;
-  --line:     #e9e9ee;
-  --red:      #e8433a;
-  --blue:     #2f6fe4;
-  --yellow:   #f0b429;
-  --green:    #22a866;
-  --purple:   #8c5cd8;
-  --cyan:     #1fb3c7;
+  --line: #e9e9ee;
+  --red: #e8433a;
+  --blue: #2f6fe4;
+  --yellow: #f0b429;
+  --green: #22a866;
+  --purple: #8c5cd8;
+  --cyan: #1fb3c7;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -43,13 +45,12 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   * {
-    animation-duration: .01ms !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-/* ---------- WHITEBOARD ---------- */
 .board {
   position: relative;
   min-height: 100svh;
@@ -66,10 +67,13 @@ a {
     linear-gradient(to right, var(--line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--line) 1px, transparent 1px);
   background-size: 52px 52px;
-  mask-image: radial-gradient(ellipse 78% 68% at 50% 28%, black 15%, transparent 80%);
+  mask-image: radial-gradient(
+    ellipse 78% 68% at 50% 28%,
+    black 15%,
+    transparent 80%
+  );
 }
 
-/* ---------- NAV ---------- */
 .nav {
   position: relative;
   z-index: 6;
@@ -107,19 +111,26 @@ a {
   background: var(--ink);
   padding: 9px 16px;
   border-radius: 3px;
-  transition: background .2s ease, transform .15s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
 }
-.nav-cta:hover { background: #2c2c33; transform: translateY(-1px); }
-.nav-cta:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.nav-cta:hover {
+  background: #2c2c33;
+  transform: translateY(-1px);
+}
+.nav-cta:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
 
-/* ---------- APB TAG ---------- */
 .apb-tag {
   position: relative;
   z-index: 6;
   width: fit-content;
   margin: 28px auto 0;
   font-size: 11px;
-  letter-spacing: .8px;
+  letter-spacing: 0.8px;
   color: var(--ink-soft);
   display: flex;
   align-items: center;
@@ -135,18 +146,20 @@ a {
 }
 
 @keyframes blip {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: .2; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
 }
 
-/* ---------- STAGE ---------- */
 .stage {
   position: relative;
   z-index: 5;
   max-width: 1220px;
-  /* Fluid top margin to create breathing room below the logo on all screens */
   margin: clamp(30px, 5vh, 80px) auto 0;
-  /* Tame the massive desktop height so it fits seamlessly on screen without scrolling, while keeping mobile long enough to prevent bunching */
   height: clamp(750px, 85vh, 880px);
   padding: 0 clamp(16px, 3vw, 30px);
 }
@@ -157,9 +170,12 @@ a {
   z-index: 1;
   pointer-events: none;
 }
-.strings path { fill: none; stroke-width: 1.8; opacity: .55; }
+.strings path {
+  fill: none;
+  stroke-width: 1.8;
+  opacity: 0.55;
+}
 
-/* ---------- PIN ---------- */
 .pin {
   position: absolute;
   top: -7px;
@@ -168,11 +184,13 @@ a {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,.25), inset -2px -2px 2px rgba(0,0,0,.15), inset 2px 2px 2px rgba(255,255,255,.6);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    inset -2px -2px 2px rgba(0, 0, 0, 0.15),
+    inset 2px 2px 2px rgba(255, 255, 255, 0.6);
   z-index: 3;
 }
 
-/* ---------- HEADLINE CARD ---------- */
 .headline-card {
   position: absolute;
   left: 3%;
@@ -186,7 +204,6 @@ a {
   transform: rotate(-1deg);
 }
 
-/* ── HEADLINE EYES (in-flow, never overflows) ────────────────────────── */
 .headline-eyes-wrap {
   --eye-size: clamp(2rem, 9vw, 4.2rem);
   --pupil-size: calc(var(--eye-size) * 0.45);
@@ -208,7 +225,6 @@ a {
   opacity: 1;
 }
 
-/* Force eyes to be permanently visible on devices that only have touch screens (Phones, iPads) */
 @media (hover: none) {
   .headline-eyes-wrap {
     opacity: 1;
@@ -221,18 +237,30 @@ a {
   height: var(--eye-size);
   background: #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 var(--ring) #181614, -2px 4px 8px rgba(0,0,0,0.12);
+  box-shadow:
+    0 0 0 var(--ring) #181614,
+    -2px 4px 8px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   flex-shrink: 0;
   animation: headline-blink 4s infinite linear;
 }
 
-.headline-eye.blink-offset { animation-delay: 0.2s; }
+.headline-eye.blink-offset {
+  animation-delay: 0.2s;
+}
 
 @keyframes headline-blink {
-  0%,   92%  { height: var(--eye-size); }
-  94%         { height: 0; }
-  96%, 100%  { height: var(--eye-size); }
+  0%,
+  92% {
+    height: var(--eye-size);
+  }
+  94% {
+    height: 0;
+  }
+  96%,
+  100% {
+    height: var(--eye-size);
+  }
 }
 
 .headline-pupil {
@@ -250,11 +278,22 @@ a {
   position: absolute;
   width: 64px;
   height: 22px;
-  opacity: .9;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  opacity: 0.9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-.corner-tape.a { background: var(--yellow); top: -10px; left: 14%; transform: rotate(-7deg); }
-.corner-tape.b { background: var(--blue);   top: -10px; right: 12%; transform: rotate(5deg); opacity: .75; }
+.corner-tape.a {
+  background: var(--yellow);
+  top: -10px;
+  left: 14%;
+  transform: rotate(-7deg);
+}
+.corner-tape.b {
+  background: var(--blue);
+  top: -10px;
+  right: 12%;
+  transform: rotate(5deg);
+  opacity: 0.75;
+}
 
 .case-num {
   display: inline-flex;
@@ -295,12 +334,15 @@ h1 {
   stroke: var(--red);
   stroke-width: 3.5;
   stroke-linecap: round;
-  /* larger perimeter requires a higher dash string */
   stroke-dasharray: 480;
   stroke-dashoffset: 480;
   animation: draw-ring 900ms ease-out 1s forwards;
 }
-@keyframes draw-ring { to { stroke-dashoffset: 0; } }
+@keyframes draw-ring {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 
 .headline-note {
   margin-top: 16px;
@@ -310,7 +352,6 @@ h1 {
   max-width: 42ch;
 }
 
-/* ---------- STICKY ---------- */
 .sticky {
   position: absolute;
   left: 2%;
@@ -322,14 +363,15 @@ h1 {
   line-height: 1.32;
   color: #1c1c22;
   transform: rotate(-3deg);
-  box-shadow: 4px 6px 14px rgba(0,0,0,.12);
+  box-shadow: 4px 6px 14px rgba(0, 0, 0, 0.12);
   z-index: 4;
   background: var(--yellow);
-  transition: transform .2s ease;
+  transition: transform 0.2s ease;
 }
-.sticky:hover { transform: rotate(0deg) scale(1.05); }
+.sticky:hover {
+  transform: rotate(0deg) scale(1.05);
+}
 
-/* 404 specific sticky placement to avoid colliding with the centered card on mobile */
 .sticky-404 {
   right: 12%;
   bottom: 15%;
@@ -346,7 +388,6 @@ h1 {
   }
 }
 
-/* ---------- SUSPECT CARDS ---------- */
 .suspect {
   position: absolute;
   width: 104px;
@@ -356,7 +397,9 @@ h1 {
   padding: 8px 8px 9px;
   box-shadow: 3px 4px 0 var(--line);
   z-index: 3;
-  transition: transform .3s ease, box-shadow .3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 .suspect:hover {
   transform: rotate(0deg) scale(1.06) !important;
@@ -418,7 +461,7 @@ h1 {
   height: auto;
   fill: none;
   stroke-width: 1.3;
-  opacity: .8;
+  opacity: 0.8;
 }
 .suspect .redact {
   position: absolute;
@@ -427,7 +470,7 @@ h1 {
   width: 72%;
   height: 11%;
   background: var(--ink);
-  opacity: .85;
+  opacity: 0.85;
 }
 
 .suspect .meta {
@@ -436,10 +479,16 @@ h1 {
   align-items: center;
   margin-top: 7px;
 }
-.suspect .num { font-size: 9.5px; color: var(--ink-soft); }
-.suspect .swatch { width: 8px; height: 8px; border-radius: 50%; }
+.suspect .num {
+  font-size: 9.5px;
+  color: var(--ink-soft);
+}
+.suspect .swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
 
-/* Flag badge */
 .flag {
   position: absolute;
   top: -10px;
@@ -454,21 +503,28 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 8px rgba(232,67,58,.4);
+  box-shadow: 0 4px 8px rgba(232, 67, 58, 0.4);
   z-index: 5;
   transform: scale(0);
   opacity: 0;
 }
 .suspect.flagged .flag {
-  animation: flag-pop 340ms cubic-bezier(.2,1.4,.4,1) forwards;
+  animation: flag-pop 340ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
 }
 @keyframes flag-pop {
-  0%   { transform: scale(1.8); opacity: 0; }
-  70%  { opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-/* ---------- STAT TAG ---------- */
 .stat-tag {
   position: absolute;
   right: 3%;
@@ -481,10 +537,17 @@ h1 {
   z-index: 4;
   transform: rotate(2deg);
 }
-.stat-tag b    { font-weight: 700; font-size: 21px; color: var(--blue); }
-.stat-tag span { display: block; font-size: 9.5px; color: var(--ink-soft); }
+.stat-tag b {
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--blue);
+}
+.stat-tag span {
+  display: block;
+  font-size: 9.5px;
+  color: var(--ink-soft);
+}
 
-/* ---------- CTA DOCK ---------- */
 .cta-dock {
   position: absolute;
   left: 50%;
@@ -505,7 +568,10 @@ h1 {
   cursor: pointer;
   border-radius: 3px;
   border: none;
-  transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.2s ease;
   text-decoration: none;
   display: inline-block;
 }
@@ -515,7 +581,10 @@ h1 {
   border: 1.5px solid var(--red);
   box-shadow: 4px 4px 0 var(--ink);
 }
-.btn-primary:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+.btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
 
 .btn-secondary {
   background: #fff;
@@ -523,10 +592,15 @@ h1 {
   border: 1.5px solid var(--ink);
   box-shadow: 4px 4px 0 var(--line);
 }
-.btn-secondary:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--line); }
-.btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.btn-secondary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--line);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
 
-/* ---------- TRANSCRIPT ---------- */
 .transcript {
   position: absolute;
   right: 2.5%;
@@ -558,8 +632,15 @@ h1 {
   transform: translateY(4px);
   margin-bottom: 6px;
 }
-.transcript .entry.show { animation: e-in .4s ease forwards; }
-@keyframes e-in { to { opacity: 1; transform: translateY(0); } }
+.transcript .entry.show {
+  animation: e-in 0.4s ease forwards;
+}
+@keyframes e-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .transcript .entry .dot {
   width: 7px;
   height: 7px;
@@ -568,11 +649,12 @@ h1 {
   flex-shrink: 0;
 }
 
-/* ---------- MOBILE ---------- */
 @media (max-width: 760px) {
-  .strings, .stat-tag { display: none; }
+  .strings,
+  .stat-tag {
+    display: none;
+  }
 
-  /* APB banner: allow text to wrap gracefully */
   .apb-tag {
     text-align: center;
     flex-wrap: wrap;
@@ -590,17 +672,17 @@ h1 {
     padding: 20px 16px 60px;
   }
 
-  /* Remove absolute positioning so cards stack naturally */
   .headline-card {
     position: static;
     transform: none;
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
-    /* keep a subtle tilt on larger phones */
   }
   @media (min-width: 480px) {
-    .headline-card { transform: rotate(-0.5deg); }
+    .headline-card {
+      transform: rotate(-0.5deg);
+    }
   }
 
   .sticky {
@@ -620,7 +702,6 @@ h1 {
     margin: 0 auto;
   }
 
-  /* Suspect grid: 4 cols on phones ≥ 360px, 2 cols on tiny screens */
   .suspect-scatter {
     position: static !important;
     display: grid;
@@ -630,7 +711,9 @@ h1 {
     max-width: 480px;
   }
   @media (max-width: 400px) {
-    .suspect-scatter { grid-template-columns: repeat(2, 1fr); }
+    .suspect-scatter {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   .suspect {
@@ -638,11 +721,14 @@ h1 {
     width: auto;
     transform: none !important;
   }
-  .suspect .pin { display: none; }
-  /* ensure suspect hover doesn't glitch on touch */
-  .suspect:hover { transform: none !important; box-shadow: 3px 4px 0 var(--line); }
+  .suspect .pin {
+    display: none;
+  }
+  .suspect:hover {
+    transform: none !important;
+    box-shadow: 3px 4px 0 var(--line);
+  }
 
-  /* CTA: stack vertically, full width */
   .cta-dock {
     position: static;
     transform: none;
@@ -651,5 +737,8 @@ h1 {
     max-width: 480px;
     margin: 0 auto;
   }
-  .btn { width: 100%; text-align: center; }
+  .btn {
+    width: 100%;
+    text-align: center;
+  }
 }
