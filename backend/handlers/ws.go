@@ -231,7 +231,14 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				}
 			}
 
-			if err := room.StartGame(wp.WordA, wp.WordB); err != nil {
+			customImposters := 0
+			if payload, ok := action["payload"].(map[string]interface{}); ok {
+				if ic, ok := payload["imposterCount"].(float64); ok {
+					customImposters = int(ic)
+				}
+			}
+
+			if err := room.StartGame(wp.WordA, wp.WordB, customImposters); err != nil {
 				conn.WriteJSON(gin.H{"error": err.Error()})
 				continue
 			}

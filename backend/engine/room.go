@@ -145,7 +145,7 @@ func (r *Room) RemovePlayer(playerID string) {
 	}
 }
 
-func (r *Room) StartGame(crewWord, imposterWord string) error {
+func (r *Room) StartGame(crewWord, imposterWord string, customImposters int) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -170,14 +170,16 @@ func (r *Room) StartGame(crewWord, imposterWord string) error {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	imposterCounts := map[int]int{
-		3: 1, 4: 1, 5: 1,
-		6: 2, 7: 2,
-		8: 3, 9: 3,
-		10: 4,
+	numImps := customImposters
+
+	// Sanity check: prevent imposters >= crew
+	if numImps >= len(pids)/2 && len(pids) > 3 {
+		numImps = (len(pids) / 2) - 1
+	} else if numImps >= len(pids) {
+		numImps = 1 // absolute fallback for <4 players if user sent high custom override
 	}
-	numImps := imposterCounts[len(pids)]
-	if numImps == 0 {
+
+	if numImps < 1 {
 		numImps = 1
 	}
 

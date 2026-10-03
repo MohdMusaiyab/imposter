@@ -417,6 +417,7 @@ function LobbyView({
     (a, b) => a.order - b.order,
   );
   const [newLocalName, setNewLocalName] = useState("");
+  const [customImposters, setCustomImposters] = useState(1);
 
   const handleAddLocalPlayer = () => {
     if (!newLocalName.trim()) return;
@@ -599,8 +600,57 @@ function LobbyView({
           </p>
         ) : (
           <>
+            {players.length >= 4 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  background: "#fafafa",
+                  padding: "12px 14px",
+                  border: "1.5px solid #e9e9ee",
+                  borderRadius: 3,
+                }}
+              >
+                <span
+                  className={mono.className}
+                  style={{
+                    fontSize: 11,
+                    color: "#77788a",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  IMPOSTER COUNT
+                </span>
+                <select
+                  value={customImposters}
+                  onChange={(e) => setCustomImposters(Number(e.target.value))}
+                  className={mono.className}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    outline: "none",
+                    fontSize: 13,
+                    color: "#16161a",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textAlign: "right",
+                  }}
+                >
+                  {[
+                    ...Array(
+                      Math.max(1, Math.floor((players.length - 1) / 2)),
+                    ),
+                  ].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1} {i === 0 ? "Imposter" : "Imposters"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button
-              onClick={() => sendAction("START")}
+              onClick={() => sendAction("START", { imposterCount: customImposters })}
               disabled={players.length < 3}
               style={{
                 ...btnPrimary,
