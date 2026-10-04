@@ -230,6 +230,12 @@ export default function LandingPage() {
           >
             JOIN A GAME
           </Link>
+          <Link
+            href="/rules"
+            className={`btn btn-secondary ${space.className}`}
+          >
+            HOW TO PLAY
+          </Link>
         </div>
       </div>
 

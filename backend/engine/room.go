@@ -58,6 +58,10 @@ func (r *Room) RemovePlayer(playerID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
+	if r.IsSingleDevice {
+		return
+	}
+
 	p, exists := r.Players[playerID]
 	if !exists {
 		return
