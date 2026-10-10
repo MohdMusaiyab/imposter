@@ -60,7 +60,7 @@ export function useGameSocket(roomId: string | null) {
           ? `ws://${window.location.hostname}:9999`
           : "wss://imposter-54yr.onrender.com");
 
-      const wsUrl = `${wsBaseUrl}/ws/room/${roomId}?playerId=${session.playerId}&playerName=${encodeURIComponent(session.name)}`;
+      const wsUrl = `${wsBaseUrl}/ws/room/${roomId}?token=${session.token}&playerName=${encodeURIComponent(session.name)}`;
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 

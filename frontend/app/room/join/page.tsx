@@ -20,20 +20,59 @@ export default function JoinRoom() {
   const router = useRouter();
   const [playerName, setPlayerName] = useState("");
   const [roomCode, setRoomCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!playerName.trim() || !roomCode.trim()) return;
+    setLoading(true);
+    setErr("");
 
     const formattedCode = roomCode.trim().toUpperCase();
-    const sessionData = {
-      playerId: crypto.randomUUID(),
-      name: playerName.trim(),
-      roomId: formattedCode,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-    };
-    localStorage.setItem("imposter_session", JSON.stringify(sessionData));
-    router.push(`/room/${formattedCode}`);
+    const newPlayerId = crypto.randomUUID();
+
+    try {
+      const isLocal =
+        window.location.hostname === "localhost" ||
+        window.location.hostname.startsWith("192.168.");
+      const httpBaseUrl =
+        process.env.NEXT_PUBLIC_API_URL ||
+        (isLocal
+          ? `http://${window.location.hostname}:9999`
+          : "https://imposter-54yr.onrender.com");
+
+      const response = await fetch(`${httpBaseUrl}/api/rooms/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomCode: formattedCode,
+          playerId: newPlayerId,
+        }),
+      });
+
+      if (!response.ok) {
+        setErr("Room not found or invalid code.");
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      const sessionData = {
+        playerId: newPlayerId,
+        name: playerName.trim(),
+        roomId: formattedCode,
+        token: data.token,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      };
+      
+      localStorage.setItem("imposter_session", JSON.stringify(sessionData));
+      router.push(`/room/${formattedCode}`);
+    } catch {
+      setErr("Could not reach the server.");
+      setLoading(false);
+    }
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -197,35 +236,55 @@ export default function JoinRoom() {
               />
             </div>
 
+            {err && (
+              <p
+                className={mono.className}
+                style={{
+                  fontSize: 12,
+                  color: "#e8433a",
+                  padding: "8px 12px",
+                  border: "1px solid #e8433a",
+                  borderRadius: 3,
+                }}
+              >
+                {err}
+              </p>
+            )}
+
             <button
               type="submit"
+              disabled={loading}
               className={space.className}
               style={{
                 marginTop: 8,
                 padding: "15px 28px",
                 fontSize: 15,
                 fontWeight: 700,
-                background: "#e8433a",
-                color: "#fff",
-                border: "1.5px solid #e8433a",
-                boxShadow: "4px 4px 0 #16161a",
+                background: loading ? "#e9e9ee" : "#e8433a",
+                color: loading ? "#77788a" : "#fff",
+                border: "1.5px solid",
+                borderColor: loading ? "#e9e9ee" : "#e8433a",
+                boxShadow: loading ? "none" : "4px 4px 0 #16161a",
                 borderRadius: 3,
-                cursor: "pointer",
+                cursor: loading ? "not-allowed" : "pointer",
                 transition: "all .18s",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform =
-                  "translate(-2px,-2px)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                  "6px 6px 0 #16161a";
+                if (!loading) {
+                  (e.currentTarget as HTMLButtonElement).style.transform =
+                    "translate(-2px,-2px)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "6px 6px 0 #16161a";
+                }
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.transform = "";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                  "4px 4px 0 #16161a";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = loading
+                  ? "none"
+                  : "4px 4px 0 #16161a";
               }}
             >
-              ENTER THE ROOM →
+              {loading ? "CONNECTING..." : "ENTER THE ROOM →"}
             </button>
           </form>
 

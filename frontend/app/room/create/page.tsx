@@ -39,10 +39,13 @@ export default function CreateRoom() {
           ? `http://${window.location.hostname}:9999`
           : "https://imposter-54yr.onrender.com");
 
+      const newPlayerId = crypto.randomUUID();
+
       const response = await fetch(`${httpBaseUrl}/api/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          playerId: newPlayerId,
           isPrivate: true,
           isSingleDevice,
         }),
@@ -58,9 +61,10 @@ export default function CreateRoom() {
       const actualRoomId = data.roomId;
 
       const sessionData = {
-        playerId: crypto.randomUUID(),
+        playerId: newPlayerId,
         name: playerName.trim(),
         roomId: actualRoomId,
+        token: data.token,
         isSingleDevice,
         isPrivate: true,
         expiresAt: Date.now() + 24 * 60 * 60 * 1000,

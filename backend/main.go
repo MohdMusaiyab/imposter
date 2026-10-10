@@ -57,6 +57,7 @@ func main() {
 	})
 
 	r.POST("/api/rooms", handlers.HandleCreateRoom)
+	r.POST("/api/rooms/join", handlers.HandleJoinRoom)
 	r.GET("/api/rooms/public", handlers.HandleGetPublicRooms)
 	r.GET("/ws/room/:roomId", handlers.ServeWS)
 	port := os.Getenv("PORT")

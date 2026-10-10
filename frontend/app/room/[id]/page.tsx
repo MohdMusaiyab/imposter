@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState } from "react";
+import React, { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import type { GameState, Player } from "@/hooks/useGameSocket";
@@ -1211,36 +1211,40 @@ function RevealViewSingleDevice({
   isHost: boolean;
   sendAction: (type: string) => void;
 }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const storageKey = `hotseat_index_${gameState.ID}`;
+
+  const [currentIndex, setCurrentIndex] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const saved = sessionStorage.getItem(storageKey);
+    return saved !== null ? parseInt(saved, 10) : 0;
+  });
+
   const [showWord, setShowWord] = useState(false);
 
   const activePlayers = Object.values(gameState.Players)
     .sort((a, b) => a.order - b.order)
     .filter((p) => !p.isDead);
+
+  const isLastPlayer = currentIndex === activePlayers.length - 1;
   const currentSeat = activePlayers[currentIndex];
 
-  if (!currentSeat) {
-    return (
-      <div style={{ ...cardStyle, textAlign: "center" }}>
-        <span className="corner-tape a" />
-        <h2
-          className={kalam.className}
-          style={{ fontSize: "1.8rem", marginBottom: 24, color: "#16161a" }}
-        >
-          All players initialized.
-        </h2>
-        {isHost && (
-          <button
-            onClick={() => sendAction("CONTINUE_DISCUSSION")}
-            style={btnPrimary}
-            className={space.className}
-          >
-            BEGIN DISCUSSION →
-          </button>
-        )}
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(storageKey, String(currentIndex));
+    }
+  }, [currentIndex, storageKey]);
+
+  const handleMemorized = () => {
+    setShowWord(false);
+    if (isLastPlayer) {
+      sessionStorage.removeItem(storageKey);
+      sendAction("CONTINUE_DISCUSSION");
+    } else {
+      setCurrentIndex((c) => c + 1);
+    }
+  };
+
+  if (!currentSeat) return null;
 
   return (
     <div
@@ -1262,7 +1266,7 @@ function RevealViewSingleDevice({
           marginBottom: 8,
         }}
       >
-        HOTSEAT HANDOFF
+        HOTSEAT HANDOFF · {currentIndex + 1} of {activePlayers.length}
       </div>
       <h2
         className={kalam.className}
@@ -1276,7 +1280,6 @@ function RevealViewSingleDevice({
         <span style={{ color: "#8c5cd8" }}>{currentSeat.name}</span>
       </h2>
 
-      {}
       <div
         style={{
           padding: "28px 20px",
@@ -1313,14 +1316,11 @@ function RevealViewSingleDevice({
 
       {showWord ? (
         <button
-          onClick={() => {
-            setShowWord(false);
-            setCurrentIndex((c) => c + 1);
-          }}
+          onClick={handleMemorized}
           style={btnPrimary}
           className={space.className}
         >
-          I MEMORIZED IT ✓ — NEXT PLAYER
+          {isLastPlayer ? "I MEMORIZED IT ✓ — START" : "I MEMORIZED IT ✓ — NEXT PLAYER"}
         </button>
       ) : (
         <button

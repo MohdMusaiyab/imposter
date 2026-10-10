@@ -54,13 +54,21 @@ func init() {
 
 func ServeWS(c *gin.Context) {
 	roomID := c.Param("roomId")
-	playerID := c.Query("playerId")
+	rawToken := c.Query("token")
 	playerName := c.Query("playerName")
 
-	if playerID == "" || playerName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing player credentials"})
+	if rawToken == "" || playerName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing player credentials or token"})
 		return
 	}
+
+	claims, err := VerifyToken(rawToken)
+	if err != nil || claims.RoomID != roomID {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		return
+	}
+
+	playerID := claims.PlayerID
 
 	if len(playerName) > 30 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Player name too long (max 30 chars)"})
@@ -148,7 +156,23 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 		}()
 	}()
 
+	rateLimitWindow := time.Now()
+	messageCount := 0
+	const maxMessages = 15
+	const windowDuration = 10 * time.Second
+
 	for {
+		now := time.Now()
+		if now.Sub(rateLimitWindow) > windowDuration {
+			rateLimitWindow = now
+			messageCount = 0
+		}
+		messageCount++
+		if messageCount > maxMessages {
+			log.Printf("Rate limit exceeded for player %s in room %s", playerID, room.ID)
+			break
+		}
+
 		var action map[string]interface{}
 		if err := conn.ReadJSON(&action); err != nil {
 			break
