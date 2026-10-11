@@ -3,27 +3,73 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://hey-imposter.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
   title: {
-    default: "Imposter | The Word Deduction Party Game",
-    template: "%s | Imposter"
+    default: "Imposter | The Word Deduction Game",
+    template: "%s | Imposter",
   },
   description:
-    "A fast-paced, real-time multiplayer word deduction game. Play with friends, uncover the hidden imposter, and find out who is lying. Trust the tasks, not the talking.",
-  keywords: ["imposter", "word game", "multiplayer", "social deduction", "party game", "online game", "bluffing"],
+    "Can you spot the liar? Play Imposter free online with friends. One player doesn’t know the real word. Give clues, bluff, and vote them out.",
+  keywords: [
+    "imposter game",
+    "impostor game",
+    "imposter word game",
+    "online imposter game",
+    "free imposter game",
+    "imposter game with friends",
+    "word deduction game",
+    "social deduction game",
+    "online party game",
+    "browser party game",
+    "multiplayer word game",
+    "bluffing game",
+    "find the imposter",
+    "who is the imposter game",
+  ],
   openGraph: {
-    title: "Imposter | The Word Deduction Party Game",
-    description: "A fast-paced, real-time multiplayer word deduction game. Can you find the liar?",
+    title: "Imposter: Can You Spot the Liar?",
+    description:
+      "Free online word game for friends. One player has no idea what the word is. Give clues, bluff, and vote them out.",
+    url: "https://hey-imposter.vercel.app",
     type: "website",
     locale: "en_US",
     siteName: "Imposter",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Imposter | The Word Deduction Party Game",
-    description: "Uncover the hidden imposter among your friends in this real-time word deduction game.",
+    title: "Imposter: Can You Spot the Liar?",
+    description:
+      "Free online word game for friends. One player has no idea what the word is. Give clues, bluff, and vote them out.",
   },
   verification: {
     google: "tZEIXbvD5UYrx3nodRLPoBvTizs8JtiI0uhBxmyLM4M",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": ["WebApplication", "VideoGame"],
+  name: "Imposter",
+  applicationCategory: "GameApplication",
+  genre: "Social Deduction Party Game",
+  operatingSystem: "All modern browsers (iOS, Android, Windows, macOS, Linux)",
+  browserRequirements: "Requires JavaScript. Requires HTML5.",
+  url: "https://hey-imposter.vercel.app",
+  description:
+    "A fast-paced, real-time multiplayer word deduction game. Play with friends, uncover the hidden imposter, and find out who is lying.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "INR",
+  },
+  playMode: "MultiPlayer",
+  numberOfPlayers: {
+    "@type": "QuantitativeValue",
+    minValue: 3,
+    maxValue: 10,
   },
 };
 
@@ -34,6 +80,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
         {children}
         <Analytics />
@@ -41,4 +93,3 @@ export default function RootLayout({
     </html>
   );
 }
-
