@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 import HeadlineEyes from "./components/HeadlineEyes";
 import PencilLogo from "./components/PencilLogo";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 const space = Space_Grotesk({
   subsets: ["latin"],
@@ -236,8 +237,11 @@ export default function LandingPage() {
           >
             HOW TO PLAY
           </Link>
+          <PWAInstallPrompt variant="dock" />
         </div>
       </div>
+
+      <PWAInstallPrompt variant="floating-banner" />
 
       <footer
         className={mono.className}
