@@ -221,8 +221,36 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				continue
 			}
 
+			customImposters := 0
+			if payload, ok := action["payload"].(map[string]interface{}); ok {
+				if ic, ok := payload["imposterCount"].(float64); ok {
+					customImposters = int(ic)
+				}
+				if cats, ok := payload["categories"].([]interface{}); ok {
+					var validCats []string
+					for _, c := range cats {
+						if cs, ok := c.(string); ok && models.IsValidCategory(cs) {
+							validCats = append(validCats, cs)
+						}
+					}
+					room.Mu.Lock()
+					room.ActiveCategories = validCats
+					room.Mu.Unlock()
+				}
+			}
+
+			room.Mu.RLock()
+			activeCats := make([]string, len(room.ActiveCategories))
+			copy(activeCats, room.ActiveCategories)
+			room.Mu.RUnlock()
+
+			query := db.DB.Model(&models.WordPair{})
+			if len(activeCats) > 0 {
+				query = query.Where("category IN (?)", activeCats)
+			}
+
 			var allIDs []uint
-			if err := db.DB.Model(&models.WordPair{}).Pluck("id", &allIDs).Error; err != nil {
+			if err := query.Pluck("id", &allIDs).Error; err != nil {
 				log.Printf("Failed to load word pairs: %v", err)
 			}
 
@@ -242,12 +270,17 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 
 			var wp models.WordPair
 			if len(availableIDs) == 0 {
-				wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
+				if len(allIDs) > 0 {
+					selectedID := allIDs[time.Now().UnixNano()%int64(len(allIDs))]
+					_ = db.DB.First(&wp, selectedID).Error
+				}
+				if wp.WordA == "" {
+					wp = models.WordPair{WordA: "Burger", WordB: "Pizza", Category: models.CategoryFoodDrink}
+				}
 			} else {
 				selectedID := availableIDs[time.Now().UnixNano()%int64(len(availableIDs))]
-
 				if err := db.DB.First(&wp, selectedID).Error; err != nil {
-					wp = models.WordPair{WordA: "Burger", WordB: "Pizza"}
+					wp = models.WordPair{WordA: "Burger", WordB: "Pizza", Category: models.CategoryFoodDrink}
 				} else {
 					room.Mu.Lock()
 					room.UsedWords = append(room.UsedWords, selectedID)
@@ -255,12 +288,9 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				}
 			}
 
-			customImposters := 0
-			if payload, ok := action["payload"].(map[string]interface{}); ok {
-				if ic, ok := payload["imposterCount"].(float64); ok {
-					customImposters = int(ic)
-				}
-			}
+			room.Mu.Lock()
+			room.CurrentCategory = string(wp.Category)
+			room.Mu.Unlock()
 
 			if err := room.StartGame(wp.WordA, wp.WordB, customImposters); err != nil {
 				conn.WriteJSON(gin.H{"error": err.Error()})
@@ -352,6 +382,24 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				continue
 			}
 			room.ResetForNextRound()
+
+		case "UPDATE_CATEGORIES":
+			if !isHost {
+				continue
+			}
+			if payload, ok := action["payload"].(map[string]interface{}); ok {
+				if cats, ok := payload["categories"].([]interface{}); ok {
+					var validCats []string
+					for _, c := range cats {
+						if cs, ok := c.(string); ok && models.IsValidCategory(cs) {
+							validCats = append(validCats, cs)
+						}
+					}
+					room.Mu.Lock()
+					room.ActiveCategories = validCats
+					room.Mu.Unlock()
+				}
+			}
 		}
 
 		broadcastStateToRoom(room)
@@ -384,13 +432,15 @@ func mapRoomState(room *engine.Room, connectionPlayerID string) map[string]inter
 	}
 
 	return map[string]interface{}{
-		"ID":             room.ID,
-		"IsSingleDevice": room.IsSingleDevice,
-		"IsPrivate":      room.IsPrivate,
-		"Phase":          room.Phase,
-		"Winner":         room.Winner,
-		"LastEliminated": room.LastEliminated,
-		"Players":        playersExport,
+		"ID":               room.ID,
+		"IsSingleDevice":   room.IsSingleDevice,
+		"IsPrivate":        room.IsPrivate,
+		"Phase":            room.Phase,
+		"Winner":           room.Winner,
+		"LastEliminated":   room.LastEliminated,
+		"ActiveCategories": room.ActiveCategories,
+		"CurrentCategory":  room.CurrentCategory,
+		"Players":          playersExport,
 	}
 }
 

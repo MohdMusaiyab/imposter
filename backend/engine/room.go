@@ -394,6 +394,7 @@ func (r *Room) ResetForNextRound() {
 	r.CrewWord = ""
 	r.Winner = ""
 	r.LastEliminated = ""
+	r.CurrentCategory = ""
 	r.LastActivity = time.Now()
 
 	for _, p := range r.Players {

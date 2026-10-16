@@ -37,8 +37,10 @@ type Room struct {
 	Players        map[string]*Player
 	ImposterWord   string
 	CrewWord       string
-	LastEliminated string
-	Winner         string
+	LastEliminated   string
+	Winner           string
+	ActiveCategories []string
+	CurrentCategory  string
 
 	nextOrder    int
 	LastActivity time.Time
