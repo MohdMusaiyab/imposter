@@ -23,6 +23,8 @@ export interface GameState {
   Players: Record<string, Player>;
   ImposterWord: string;
   CrewWord: string;
+  ActiveCategories?: string[];
+  CurrentCategory?: string;
 }
 
 export function useGameSocket(roomId: string | null) {

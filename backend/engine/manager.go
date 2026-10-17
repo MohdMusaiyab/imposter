@@ -82,9 +82,10 @@ func (m *GlobalManager) CreateRoom(isPrivate, isSingleDevice bool) *Room {
 		ID:             code,
 		IsSingleDevice: isSingleDevice,
 		IsPrivate:      isPrivate,
-		Phase:          PhaseLobby,
-		Players:        make(map[string]*Player),
-		LastActivity:   time.Now(),
+		Phase:            PhaseLobby,
+		Players:          make(map[string]*Player),
+		ActiveCategories: []string{},
+		LastActivity:     time.Now(),
 	}
 
 	m.rooms[code] = newRoom

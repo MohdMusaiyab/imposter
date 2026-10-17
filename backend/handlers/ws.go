@@ -134,6 +134,45 @@ func writePump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	}
 }
 
+func parseCategoriesFromAction(action map[string]interface{}) ([]string, bool) {
+	var rawCats []interface{}
+	found := false
+
+	if cats, ok := action["categories"].([]interface{}); ok {
+		rawCats = cats
+		found = true
+	} else if payload, ok := action["payload"].(map[string]interface{}); ok {
+		if cats, ok := payload["categories"].([]interface{}); ok {
+			rawCats = cats
+			found = true
+		}
+	}
+
+	if !found {
+		return nil, false
+	}
+
+	validCats := make([]string, 0)
+	for _, c := range rawCats {
+		if cs, ok := c.(string); ok && models.IsValidCategory(cs) {
+			validCats = append(validCats, cs)
+		}
+	}
+	return validCats, true
+}
+
+func parseImposterCountFromAction(action map[string]interface{}) int {
+	if ic, ok := action["imposterCount"].(float64); ok {
+		return int(ic)
+	}
+	if payload, ok := action["payload"].(map[string]interface{}); ok {
+		if ic, ok := payload["imposterCount"].(float64); ok {
+			return int(ic)
+		}
+	}
+	return 0
+}
+
 func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	defer func() {
 		connMutex.Lock()
@@ -184,7 +223,7 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 		}
 
 		room.Mu.RLock()
-		isHost := false
+		isHost := room.IsSingleDevice
 		if p, exists := room.Players[playerID]; exists && p.IsHost {
 			isHost = true
 		}
@@ -221,22 +260,11 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				continue
 			}
 
-			customImposters := 0
-			if payload, ok := action["payload"].(map[string]interface{}); ok {
-				if ic, ok := payload["imposterCount"].(float64); ok {
-					customImposters = int(ic)
-				}
-				if cats, ok := payload["categories"].([]interface{}); ok {
-					var validCats []string
-					for _, c := range cats {
-						if cs, ok := c.(string); ok && models.IsValidCategory(cs) {
-							validCats = append(validCats, cs)
-						}
-					}
-					room.Mu.Lock()
-					room.ActiveCategories = validCats
-					room.Mu.Unlock()
-				}
+			customImposters := parseImposterCountFromAction(action)
+			if validCats, ok := parseCategoriesFromAction(action); ok {
+				room.Mu.Lock()
+				room.ActiveCategories = validCats
+				room.Mu.Unlock()
 			}
 
 			room.Mu.RLock()
@@ -387,18 +415,10 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 			if !isHost {
 				continue
 			}
-			if payload, ok := action["payload"].(map[string]interface{}); ok {
-				if cats, ok := payload["categories"].([]interface{}); ok {
-					var validCats []string
-					for _, c := range cats {
-						if cs, ok := c.(string); ok && models.IsValidCategory(cs) {
-							validCats = append(validCats, cs)
-						}
-					}
-					room.Mu.Lock()
-					room.ActiveCategories = validCats
-					room.Mu.Unlock()
-				}
+			if validCats, ok := parseCategoriesFromAction(action); ok {
+				room.Mu.Lock()
+				room.ActiveCategories = validCats
+				room.Mu.Unlock()
 			}
 		}
 

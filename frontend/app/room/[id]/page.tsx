@@ -6,6 +6,8 @@ import { useGameSocket } from "@/hooks/useGameSocket";
 import type { GameState, Player } from "@/hooks/useGameSocket";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
+import CategorySelector from "@/app/components/CategorySelector";
+import { CATEGORIES, CategoryKey } from "@/types/categories";
 
 const space = Space_Grotesk({
   subsets: ["latin"],
@@ -188,7 +190,7 @@ function GameRoom({ roomId }: { roomId: string }) {
   }
 
   const currentPlayer = gameState.Players[localPlayerId];
-  const isHost = currentPlayer?.isHost ?? false;
+  const isHost = gameState.IsSingleDevice || (currentPlayer?.isHost ?? false);
 
   const renderPhaseView = () => {
     switch (gameState.Phase) {
@@ -211,6 +213,7 @@ function GameRoom({ roomId }: { roomId: string }) {
         ) : (
           <RevealView
             currentPlayer={currentPlayer}
+            currentCategory={gameState.CurrentCategory}
             isHost={isHost}
             sendAction={sendAction}
           />
@@ -219,6 +222,7 @@ function GameRoom({ roomId }: { roomId: string }) {
         return (
           <DiscussionView
             currentPlayer={currentPlayer}
+            currentCategory={gameState.CurrentCategory}
             isHost={isHost}
             sendAction={sendAction}
           />
@@ -587,19 +591,34 @@ function LobbyView({
         }}
       >
         {!isHost ? (
-          <p
-            className={mono.className}
-            style={{
-              textAlign: "center",
-              fontSize: 12,
-              color: "#77788a",
-              letterSpacing: "0.5px",
-            }}
-          >
-            Waiting for the host to start the game...
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <CategorySelector
+              selectedCategories={gameState.ActiveCategories || []}
+              isHost={false}
+              onUpdateCategories={() => {}}
+            />
+            <p
+              className={mono.className}
+              style={{
+                textAlign: "center",
+                fontSize: 12,
+                color: "#77788a",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Waiting for the host to start the game...
+            </p>
+          </div>
         ) : (
           <>
+            <CategorySelector
+              selectedCategories={gameState.ActiveCategories || []}
+              isHost={true}
+              onUpdateCategories={(newCats: string[]) =>
+                sendAction("UPDATE_CATEGORIES", { categories: newCats })
+              }
+            />
+
             {players.length >= 4 && (
               <div
                 style={{
@@ -650,7 +669,12 @@ function LobbyView({
               </div>
             )}
             <button
-              onClick={() => sendAction("START", { imposterCount: customImposters })}
+              onClick={() =>
+                sendAction("START", {
+                  imposterCount: customImposters,
+                  categories: gameState.ActiveCategories || [],
+                })
+              }
               disabled={players.length < 3}
               style={{
                 ...btnPrimary,
@@ -682,10 +706,12 @@ function LobbyView({
 
 function DiscussionView({
   currentPlayer,
+  currentCategory,
   isHost,
   sendAction,
 }: {
   currentPlayer: Player | undefined;
+  currentCategory?: string;
   isHost: boolean;
   sendAction: (type: string) => void;
 }) {
@@ -711,6 +737,33 @@ function DiscussionView({
       >
         PHASE · LIVE DISCUSSION
       </div>
+
+      {currentCategory && (
+        <div
+          className={mono.className}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#fff",
+            border: "1.5px solid #16161a",
+            boxShadow: "2px 2px 0 #e8433a",
+            padding: "4px 10px",
+            borderRadius: 3,
+            fontSize: 11,
+            fontWeight: 600,
+            marginBottom: 14,
+          }}
+        >
+          <span>
+            {CATEGORIES[currentCategory as CategoryKey]?.emoji || "🏷️"}
+          </span>
+          <span>
+            THEME:{" "}
+            {CATEGORIES[currentCategory as CategoryKey]?.label || currentCategory}
+          </span>
+        </div>
+      )}
 
       <h2
         className={kalam.className}
@@ -781,7 +834,7 @@ function ResultsView({
   gameState: GameState;
   isHost: boolean;
   localPlayerId: string;
-  sendAction: (type: string) => void;
+  sendAction: (type: string, payload?: Record<string, unknown>) => void;
 }) {
   const gameContinues = gameState.Winner === "NONE";
 
@@ -806,12 +859,36 @@ function ResultsView({
         className={kalam.className}
         style={{
           fontSize: "clamp(1.8rem,4vw,2.4rem)",
-          marginBottom: 20,
+          marginBottom: 14,
           color: "#16161a",
         }}
       >
         {gameContinues ? "Round Over." : "Game Over."}
       </h2>
+
+      {gameState.CurrentCategory && (
+        <div
+          className={mono.className}
+          style={{
+            padding: "9px 13px",
+            background: "#fafafa",
+            border: "1.5px dashed #16161a",
+            borderRadius: 3,
+            fontSize: 12,
+            color: "#16161a",
+            marginBottom: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span style={{ color: "#77788a", fontSize: 11 }}>ROUND THEME:</span>
+          <span style={{ fontWeight: 700 }}>
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.emoji || "🏷️"}{" "}
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.label || gameState.CurrentCategory}
+          </span>
+        </div>
+      )}
 
       {}
       <div
@@ -950,6 +1027,18 @@ function ResultsView({
         </div>
       </div>
 
+      {!gameContinues && isHost && (
+        <div style={{ marginBottom: 16 }}>
+          <CategorySelector
+            selectedCategories={gameState.ActiveCategories || []}
+            isHost={true}
+            onUpdateCategories={(newCats: string[]) =>
+              sendAction("UPDATE_CATEGORIES", { categories: newCats })
+            }
+          />
+        </div>
+      )}
+
       {isHost && (
         <button
           onClick={() =>
@@ -967,10 +1056,12 @@ function ResultsView({
 
 function RevealView({
   currentPlayer,
+  currentCategory,
   isHost,
   sendAction,
 }: {
   currentPlayer: Player | undefined;
+  currentCategory?: string;
   isHost: boolean;
   sendAction: (type: string) => void;
 }) {
@@ -998,6 +1089,33 @@ function RevealView({
       >
         EYES ONLY · YOUR SECRET WORD
       </div>
+
+      {currentCategory && (
+        <div
+          className={mono.className}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#fff",
+            border: "1.5px solid #16161a",
+            boxShadow: "2px 2px 0 #e8433a",
+            padding: "4px 10px",
+            borderRadius: 3,
+            fontSize: 11,
+            fontWeight: 600,
+            marginBottom: 16,
+          }}
+        >
+          <span>
+            {CATEGORIES[currentCategory as CategoryKey]?.emoji || "🏷️"}
+          </span>
+          <span>
+            THEME:{" "}
+            {CATEGORIES[currentCategory as CategoryKey]?.label || currentCategory}
+          </span>
+        </div>
+      )}
 
       {!currentPlayer.isReady ? (
         <>
@@ -1097,6 +1215,34 @@ function VotingView({
       >
         PHASE · CAST YOUR VOTE
       </div>
+
+      {gameState.CurrentCategory && (
+        <div
+          className={mono.className}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#fff",
+            border: "1.5px solid #16161a",
+            boxShadow: "2px 2px 0 #e8433a",
+            padding: "4px 10px",
+            borderRadius: 3,
+            fontSize: 11,
+            fontWeight: 600,
+            marginBottom: 16,
+          }}
+        >
+          <span>
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.emoji || "🏷️"}
+          </span>
+          <span>
+            THEME:{" "}
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.label || gameState.CurrentCategory}
+          </span>
+        </div>
+      )}
+
       <h2
         className={kalam.className}
         style={{
@@ -1268,6 +1414,34 @@ function RevealViewSingleDevice({
       >
         HOTSEAT HANDOFF · {currentIndex + 1} of {activePlayers.length}
       </div>
+
+      {gameState.CurrentCategory && (
+        <div
+          className={mono.className}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#fff",
+            border: "1.5px solid #16161a",
+            boxShadow: "2px 2px 0 #e8433a",
+            padding: "4px 10px",
+            borderRadius: 3,
+            fontSize: 11,
+            fontWeight: 600,
+            marginBottom: 16,
+          }}
+        >
+          <span>
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.emoji || "🏷️"}
+          </span>
+          <span>
+            THEME:{" "}
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.label || gameState.CurrentCategory}
+          </span>
+        </div>
+      )}
+
       <h2
         className={kalam.className}
         style={{
@@ -1377,6 +1551,34 @@ function VotingViewSingleDevice({
       >
         PHASE · PUBLIC CONSENSUS VOTE
       </div>
+
+      {gameState.CurrentCategory && (
+        <div
+          className={mono.className}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#fff",
+            border: "1.5px solid #16161a",
+            boxShadow: "2px 2px 0 #e8433a",
+            padding: "4px 10px",
+            borderRadius: 3,
+            fontSize: 11,
+            fontWeight: 600,
+            marginBottom: 16,
+          }}
+        >
+          <span>
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.emoji || "🏷️"}
+          </span>
+          <span>
+            THEME:{" "}
+            {CATEGORIES[gameState.CurrentCategory as CategoryKey]?.label || gameState.CurrentCategory}
+          </span>
+        </div>
+      )}
+
       <h2
         className={kalam.className}
         style={{
