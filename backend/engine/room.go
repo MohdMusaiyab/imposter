@@ -406,3 +406,19 @@ func (r *Room) ResetForNextRound() {
 		p.IsReady = false
 	}
 }
+
+func (r *Room) ReorderPlayers(orderedIDs []string) {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	if r.Phase != PhaseLobby {
+		return
+	}
+
+	for i, id := range orderedIDs {
+		if p, exists := r.Players[id]; exists {
+			p.Order = i
+		}
+	}
+	r.LastActivity = time.Now()
+}

@@ -173,6 +173,27 @@ func parseImposterCountFromAction(action map[string]interface{}) int {
 	return 0
 }
 
+func parsePlayerIDsFromAction(action map[string]interface{}) []string {
+	var rawIDs []interface{}
+	if ids, ok := action["playerIds"].([]interface{}); ok {
+		rawIDs = ids
+	} else if payload, ok := action["payload"].(map[string]interface{}); ok {
+		if ids, ok := payload["playerIds"].([]interface{}); ok {
+			rawIDs = ids
+		}
+	}
+	if len(rawIDs) == 0 {
+		return nil
+	}
+	res := make([]string, 0, len(rawIDs))
+	for _, id := range rawIDs {
+		if sid, ok := id.(string); ok && sid != "" {
+			res = append(res, sid)
+		}
+	}
+	return res
+}
+
 func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	defer func() {
 		connMutex.Lock()
@@ -419,6 +440,14 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				room.Mu.Lock()
 				room.ActiveCategories = validCats
 				room.Mu.Unlock()
+			}
+
+		case "REORDER_PLAYERS":
+			if !isHost {
+				continue
+			}
+			if orderedIDs := parsePlayerIDsFromAction(action); len(orderedIDs) > 0 {
+				room.ReorderPlayers(orderedIDs)
 			}
 		}
 

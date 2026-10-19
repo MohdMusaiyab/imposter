@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import type { GameState, Player } from "@/hooks/useGameSocket";
@@ -8,6 +8,8 @@ import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 import CategorySelector from "@/app/components/CategorySelector";
 import { CATEGORIES, CategoryKey } from "@/types/categories";
+
+const EMPTY_CATEGORIES: string[] = [];
 
 const space = Space_Grotesk({
   subsets: ["latin"],
@@ -417,11 +419,41 @@ function LobbyView({
   localPlayerId: string;
   sendAction: (type: string, payload?: Record<string, unknown>) => void;
 }) {
-  const players = Object.values(gameState.Players).sort(
-    (a, b) => a.order - b.order,
-  );
+  const sortedPlayers = useMemo(() => {
+    return Object.values(gameState.Players).sort((a, b) => a.order - b.order);
+  }, [gameState.Players]);
+
+  const playersKey = sortedPlayers
+    .map((p) => `${p.id}:${p.order}:${p.name}:${p.isHost}:${p.isDead}`)
+    .join("|");
+
+  const [prevPlayersKey, setPrevPlayersKey] = useState(playersKey);
+  const [orderedPlayers, setOrderedPlayers] = useState(sortedPlayers);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [newLocalName, setNewLocalName] = useState("");
   const [customImposters, setCustomImposters] = useState(1);
+
+  // Safely sync with server state only when player data actually changes (value comparison)
+  if (playersKey !== prevPlayersKey) {
+    setPrevPlayersKey(playersKey);
+    setOrderedPlayers(sortedPlayers);
+  }
+
+  const handleReorder = (newOrder: Player[]) => {
+    setOrderedPlayers(newOrder);
+    sendAction("REORDER_PLAYERS", {
+      playerIds: newOrder.map((p) => p.id),
+    });
+  };
+
+  const movePlayer = (fromIndex: number, toIndex: number) => {
+    if (!isHost) return;
+    if (toIndex < 0 || toIndex >= orderedPlayers.length) return;
+    const updated = [...orderedPlayers];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    handleReorder(updated);
+  };
 
   const handleAddLocalPlayer = () => {
     if (!newLocalName.trim()) return;
@@ -434,7 +466,7 @@ function LobbyView({
 
   return (
     <div style={{ ...cardStyle, maxWidth: 680 }}>
-      {}
+      {/* Tape decoration */}
       <span className="corner-tape a" />
       <span className="corner-tape b" />
 
@@ -449,55 +481,139 @@ function LobbyView({
       >
         ROOM STATUS · GATHERING PERSONNEL
       </div>
-      <h2
-        className={kalam.className}
+      <div
         style={{
-          fontSize: "clamp(1.6rem,4vw,2.2rem)",
-          marginBottom: 24,
-          color: "#16161a",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 20,
         }}
       >
-        Lobby
-      </h2>
+        <h2
+          className={kalam.className}
+          style={{
+            fontSize: "clamp(1.6rem,4vw,2.2rem)",
+            color: "#16161a",
+            margin: 0,
+          }}
+        >
+          Lobby
+        </h2>
+        {isHost && orderedPlayers.length > 1 && (
+          <span
+            className={mono.className}
+            style={{ fontSize: 10, color: "#77788a" }}
+          >
+            Drag or use arrows to set pass/turn order
+          </span>
+        )}
+      </div>
 
-      {}
+      {/* Players List with Drag & Drop + Move Arrows */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
+          gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
           gap: 10,
           marginBottom: 24,
         }}
       >
-        {players.map((p, i) => {
+        {orderedPlayers.map((p, i) => {
           const isMe = p.id === localPlayerId;
+          const isDragging = draggedIndex === i;
+
           return (
             <div
               key={p.id}
+              draggable={isHost}
+              onDragStart={(e) => {
+                if (!isHost) return;
+                setDraggedIndex(i);
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", `${i}`);
+              }}
+              onDragOver={(e) => {
+                if (!isHost) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(e) => {
+                if (!isHost) return;
+                e.preventDefault();
+                const fromIdxStr = e.dataTransfer.getData("text/plain");
+                const fromIdx = fromIdxStr !== "" ? parseInt(fromIdxStr, 10) : draggedIndex;
+                if (fromIdx !== null && fromIdx !== undefined && fromIdx !== i) {
+                  movePlayer(fromIdx, i);
+                }
+                setDraggedIndex(null);
+              }}
+              onDragEnd={() => setDraggedIndex(null)}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "12px 14px",
-                background: isMe ? "#fff8e6" : "#fafafa",
-                border: `1.5px solid ${isMe ? "#f0b429" : "#e9e9ee"}`,
-                borderLeft: `4px solid ${isMe ? "#f0b429" : "#e9e9ee"}`,
+                padding: "10px 12px",
+                background: isDragging
+                  ? "#edeef2"
+                  : isMe
+                  ? "#fff8e6"
+                  : "#fafafa",
+                borderWidth: "1.5px 1.5px 1.5px 4px",
+                borderStyle: isDragging ? "dashed" : "solid",
+                borderColor: isDragging
+                  ? "#77788a"
+                  : isMe
+                  ? "#f0b429"
+                  : "#e9e9ee",
                 borderRadius: 3,
+                cursor: isHost ? "grab" : "default",
+                opacity: isDragging ? 0.6 : 1,
+                transition: "background 0.15s, opacity 0.15s",
+                userSelect: "none",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  overflow: "hidden",
+                }}
+              >
+                {isHost && (
+                  <span
+                    title="Drag to reorder"
+                    style={{
+                      cursor: "grab",
+                      color: "#aaaab5",
+                      fontSize: 14,
+                      lineHeight: 1,
+                      padding: "0 2px",
+                    }}
+                  >
+                    ⋮⋮
+                  </span>
+                )}
                 <span
                   className={mono.className}
-                  style={{ fontSize: 9, color: "#77788a" }}
+                  style={{ fontSize: 9.5, color: "#77788a", minWidth: 20 }}
                 >
                   #{String(i + 1).padStart(2, "0")}
                 </span>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 13.5,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {p.name}
                   {isMe && (
                     <span
                       className={mono.className}
-                      style={{ fontSize: 9, color: "#77788a", marginLeft: 6 }}
+                      style={{ fontSize: 9, color: "#77788a", marginLeft: 5 }}
                     >
                       (YOU)
                     </span>
@@ -505,34 +621,86 @@ function LobbyView({
                   {p.isDead && (
                     <span
                       className={mono.className}
-                      style={{ fontSize: 9, color: "#e8433a", marginLeft: 6 }}
+                      style={{ fontSize: 9, color: "#e8433a", marginLeft: 5 }}
                     >
                       LEFT
                     </span>
                   )}
                 </span>
               </div>
-              {p.isHost && (
-                <span
-                  className={mono.className}
-                  style={{
-                    fontSize: 9,
-                    letterSpacing: "0.5px",
-                    background: "#f0b429",
-                    color: "#16161a",
-                    padding: "2px 6px",
-                    borderRadius: 2,
-                    fontWeight: 700,
-                  }}
-                >
-                  HOST
-                </span>
-              )}
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                {p.isHost && (
+                  <span
+                    className={mono.className}
+                    style={{
+                      fontSize: 8.5,
+                      letterSpacing: "0.5px",
+                      background: "#f0b429",
+                      color: "#16161a",
+                      padding: "1px 5px",
+                      borderRadius: 2,
+                      fontWeight: 700,
+                    }}
+                  >
+                    HOST
+                  </span>
+                )}
+
+                {isHost && orderedPlayers.length > 1 && (
+                  <div style={{ display: "flex", gap: 2 }}>
+                    <button
+                      type="button"
+                      disabled={i === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        movePlayer(i, i - 1);
+                      }}
+                      title="Move up / earlier"
+                      style={{
+                        background: "#fff",
+                        border: "1px solid #dcdce2",
+                        borderRadius: 2,
+                        padding: "2px 5px",
+                        fontSize: 9,
+                        cursor: i === 0 ? "not-allowed" : "pointer",
+                        opacity: i === 0 ? 0.35 : 1,
+                        color: "#16161a",
+                        lineHeight: 1,
+                      }}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      disabled={i === orderedPlayers.length - 1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        movePlayer(i, i + 1);
+                      }}
+                      title="Move down / later"
+                      style={{
+                        background: "#fff",
+                        border: "1px solid #dcdce2",
+                        borderRadius: 2,
+                        padding: "2px 5px",
+                        fontSize: 9,
+                        cursor: i === orderedPlayers.length - 1 ? "not-allowed" : "pointer",
+                        opacity: i === orderedPlayers.length - 1 ? 0.35 : 1,
+                        color: "#16161a",
+                        lineHeight: 1,
+                      }}
+                    >
+                      ▼
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
 
-        {}
+        {/* Single Device: Inline Player Add */}
         {gameState.IsSingleDevice && isHost && (
           <div
             style={{
@@ -593,7 +761,7 @@ function LobbyView({
         {!isHost ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <CategorySelector
-              selectedCategories={gameState.ActiveCategories || []}
+              selectedCategories={gameState.ActiveCategories || EMPTY_CATEGORIES}
               isHost={false}
               onUpdateCategories={() => {}}
             />
@@ -612,14 +780,14 @@ function LobbyView({
         ) : (
           <>
             <CategorySelector
-              selectedCategories={gameState.ActiveCategories || []}
+              selectedCategories={gameState.ActiveCategories || EMPTY_CATEGORIES}
               isHost={true}
               onUpdateCategories={(newCats: string[]) =>
                 sendAction("UPDATE_CATEGORIES", { categories: newCats })
               }
             />
 
-            {players.length >= 4 && (
+            {orderedPlayers.length >= 4 && (
               <div
                 style={{
                   display: "flex",
@@ -658,7 +826,7 @@ function LobbyView({
                 >
                   {[
                     ...Array(
-                      Math.max(1, Math.floor((players.length - 1) / 2)),
+                      Math.max(1, Math.floor((orderedPlayers.length - 1) / 2)),
                     ),
                   ].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -675,19 +843,19 @@ function LobbyView({
                   categories: gameState.ActiveCategories || [],
                 })
               }
-              disabled={players.length < 3}
+              disabled={orderedPlayers.length < 3}
               style={{
                 ...btnPrimary,
-                background: players.length >= 3 ? "#e8433a" : "#e9e9ee",
-                borderColor: players.length >= 3 ? "#e8433a" : "#e9e9ee",
-                color: players.length >= 3 ? "#fff" : "#77788a",
-                boxShadow: players.length >= 3 ? "4px 4px 0 #16161a" : "none",
-                cursor: players.length >= 3 ? "pointer" : "not-allowed",
+                background: orderedPlayers.length >= 3 ? "#e8433a" : "#e9e9ee",
+                borderColor: orderedPlayers.length >= 3 ? "#e8433a" : "#e9e9ee",
+                color: orderedPlayers.length >= 3 ? "#fff" : "#77788a",
+                boxShadow: orderedPlayers.length >= 3 ? "4px 4px 0 #16161a" : "none",
+                cursor: orderedPlayers.length >= 3 ? "pointer" : "not-allowed",
               }}
               className={space.className}
             >
-              {players.length < 3
-                ? `NEEDS ${3 - players.length} MORE PLAYER${3 - players.length > 1 ? "S" : ""}`
+              {orderedPlayers.length < 3
+                ? `NEEDS ${3 - orderedPlayers.length} MORE PLAYER${3 - orderedPlayers.length > 1 ? "S" : ""}`
                 : "START GAME →"}
             </button>
             <button
@@ -1030,7 +1198,7 @@ function ResultsView({
       {!gameContinues && isHost && (
         <div style={{ marginBottom: 16 }}>
           <CategorySelector
-            selectedCategories={gameState.ActiveCategories || []}
+            selectedCategories={gameState.ActiveCategories || EMPTY_CATEGORIES}
             isHost={true}
             onUpdateCategories={(newCats: string[]) =>
               sendAction("UPDATE_CATEGORIES", { categories: newCats })
@@ -1296,8 +1464,9 @@ function VotingView({
                     style={{
                       padding: "14px 12px",
                       background: isSelected ? "#fff0ef" : "#fafafa",
-                      border: `1.5px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
-                      borderLeft: `4px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
+                      borderWidth: "1.5px 1.5px 1.5px 4px",
+                      borderStyle: "solid",
+                      borderColor: isSelected ? "#e8433a" : "#e9e9ee",
                       borderRadius: 3,
                       cursor: "pointer",
                       textAlign: "left",
@@ -1613,8 +1782,9 @@ function VotingViewSingleDevice({
                 style={{
                   padding: "14px 12px",
                   background: isSelected ? "#fff0ef" : "#fafafa",
-                  border: `1.5px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
-                  borderLeft: `4px solid ${isSelected ? "#e8433a" : "#e9e9ee"}`,
+                  borderWidth: "1.5px 1.5px 1.5px 4px",
+                  borderStyle: "solid",
+                  borderColor: isSelected ? "#e8433a" : "#e9e9ee",
                   borderRadius: 3,
                   cursor: "pointer",
                   textAlign: "left",

@@ -29,15 +29,16 @@ export default function CategorySelector({
   onUpdateCategories,
 }: CategorySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [prevSelected, setPrevSelected] = useState(selectedCategories);
+  const selectedKey = (selectedCategories || []).join(",");
+  const [prevSelectedKey, setPrevSelectedKey] = useState(selectedKey);
   // Optimistic local state for immediate feedback on click/touch
   const [localSelected, setLocalSelected] = useState<string[]>(
     selectedCategories || []
   );
 
-  // Sync with server prop updates during render (standard React pattern)
-  if (selectedCategories !== prevSelected) {
-    setPrevSelected(selectedCategories);
+  // Sync with server prop updates during render (safely comparing string by value)
+  if (selectedKey !== prevSelectedKey) {
+    setPrevSelectedKey(selectedKey);
     setLocalSelected(selectedCategories || []);
   }
 
