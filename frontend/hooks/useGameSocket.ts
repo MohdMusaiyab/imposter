@@ -13,6 +13,15 @@ export interface Player {
   IsImposter?: boolean;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: number;
+  isSystem: boolean;
+}
+
 export interface GameState {
   ID: string;
   IsSingleDevice: boolean;
@@ -25,6 +34,7 @@ export interface GameState {
   CrewWord: string;
   ActiveCategories?: string[];
   CurrentCategory?: string;
+  ChatMessages?: ChatMessage[];
 }
 
 export function useGameSocket(roomId: string | null) {

@@ -29,6 +29,15 @@ type Player struct {
 	Order      int    `json:"order"`
 }
 
+type ChatMessage struct {
+	ID         string `json:"id"`
+	SenderID   string `json:"senderId"`
+	SenderName string `json:"senderName"`
+	Text       string `json:"text"`
+	Timestamp  int64  `json:"timestamp"`
+	IsSystem   bool   `json:"isSystem"`
+}
+
 type Room struct {
 	ID             string
 	IsSingleDevice bool
@@ -41,6 +50,7 @@ type Room struct {
 	Winner           string
 	ActiveCategories []string
 	CurrentCategory  string
+	ChatMessages     []ChatMessage
 
 	nextOrder    int
 	LastActivity time.Time

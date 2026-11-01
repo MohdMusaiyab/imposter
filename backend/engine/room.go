@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -421,4 +422,36 @@ func (r *Room) ReorderPlayers(orderedIDs []string) {
 		}
 	}
 	r.LastActivity = time.Now()
+}
+
+func (r *Room) AddChatMessage(senderID, text string) (*ChatMessage, error) {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	p, exists := r.Players[senderID]
+	if !exists {
+		return nil, errors.New("player not in room")
+	}
+
+	// Mute eliminated players during active rounds to prevent spoilers
+	if p.IsDead && (r.Phase == PhaseDiscussion || r.Phase == PhaseVoting) {
+		return nil, errors.New("eliminated players are muted during active rounds")
+	}
+
+	msgID := fmt.Sprintf("msg_%d_%d", time.Now().UnixNano(), len(r.ChatMessages)+1)
+	msg := ChatMessage{
+		ID:         msgID,
+		SenderID:   p.ID,
+		SenderName: p.Name,
+		Text:       text,
+		Timestamp:  time.Now().UnixMilli(),
+		IsSystem:   false,
+	}
+
+	r.ChatMessages = append(r.ChatMessages, msg)
+	if len(r.ChatMessages) > 80 {
+		r.ChatMessages = r.ChatMessages[len(r.ChatMessages)-80:]
+	}
+	r.LastActivity = time.Now()
+	return &msg, nil
 }

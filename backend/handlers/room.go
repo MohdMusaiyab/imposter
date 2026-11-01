@@ -47,6 +47,11 @@ func HandleJoinRoom(c *gin.Context) {
 		return
 	}
 
+	if room.IsSingleDevice {
+		c.JSON(http.StatusForbidden, gin.H{"error": "This is a local Pass-and-Play room and does not accept remote connections."})
+		return
+	}
+
 	token := IssueToken(req.PlayerID, room.ID, false)
 
 	c.JSON(http.StatusOK, gin.H{

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PencilLogo from "@/app/components/PencilLogo";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
@@ -17,11 +17,53 @@ const mono = IBM_Plex_Mono({
 });
 
 export default function JoinRoom() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className={`board ${space.className}`}
+          style={{
+            minHeight: "100svh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <p
+              className={mono.className}
+              style={{ fontSize: 11, letterSpacing: "1.5px", color: "#77788a" }}
+            >
+              LOADING ENTRY TERMINAL...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <JoinRoomForm />
+    </Suspense>
+  );
+}
+
+function JoinRoomForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const codeParam = (
+    searchParams.get("code") ||
+    searchParams.get("room") ||
+    ""
+  ).toUpperCase();
+
   const [playerName, setPlayerName] = useState("");
-  const [roomCode, setRoomCode] = useState("");
+  const [prevCodeParam, setPrevCodeParam] = useState(codeParam);
+  const [roomCode, setRoomCode] = useState(codeParam);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+
+  if (codeParam !== prevCodeParam) {
+    setPrevCodeParam(codeParam);
+    setRoomCode(codeParam);
+  }
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +94,8 @@ export default function JoinRoom() {
       });
 
       if (!response.ok) {
-        setErr("Room not found or invalid code.");
+        const errorData = await response.json().catch(() => null);
+        setErr(errorData?.error || "Room not found or invalid code.");
         setLoading(false);
         return;
       }
@@ -66,7 +109,7 @@ export default function JoinRoom() {
         token: data.token,
         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       };
-      
+
       localStorage.setItem("imposter_session", JSON.stringify(sessionData));
       router.push(`/room/${formattedCode}`);
     } catch {
@@ -78,7 +121,7 @@ export default function JoinRoom() {
   const fieldStyle: React.CSSProperties = {
     width: "100%",
     padding: "12px 14px",
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "inherit",
     background: "#fafafa",
     border: "1.5px solid #e9e9ee",
@@ -169,6 +212,7 @@ export default function JoinRoom() {
           >
             Join a Game
           </h1>
+
           <p
             className={mono.className}
             style={{ fontSize: 13, color: "#77788a", marginBottom: 28 }}
@@ -181,18 +225,34 @@ export default function JoinRoom() {
             style={{ display: "flex", flexDirection: "column", gap: 20 }}
           >
             <div>
-              <label
-                className={mono.className}
+              <div
                 style={{
-                  display: "block",
-                  fontSize: 11,
-                  letterSpacing: "0.8px",
-                  color: "#77788a",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
                   marginBottom: 8,
                 }}
               >
-                ROOM CODE
-              </label>
+                <label
+                  className={mono.className}
+                  style={{
+                    display: "block",
+                    fontSize: 11,
+                    letterSpacing: "0.8px",
+                    color: "#77788a",
+                  }}
+                >
+                  ROOM CODE
+                </label>
+                {codeParam && (
+                  <span
+                    className={mono.className}
+                    style={{ fontSize: 10, color: "#22a866", fontWeight: 600 }}
+                  >
+                    ✓ PRE-FILLED FROM INVITE LINK
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={roomCode}
@@ -229,6 +289,7 @@ export default function JoinRoom() {
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 placeholder="e.g. Maverick"
+                autoFocus={Boolean(codeParam)}
                 required
                 style={fieldStyle}
                 onFocus={(e) => (e.target.style.borderColor = "#e8433a")}
@@ -271,15 +332,13 @@ export default function JoinRoom() {
               }}
               onMouseEnter={(e) => {
                 if (!loading) {
-                  (e.currentTarget as HTMLButtonElement).style.transform =
-                    "translate(-2px,-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                    "6px 6px 0 #16161a";
+                  e.currentTarget.style.transform = "translate(-2px,-2px)";
+                  e.currentTarget.style.boxShadow = "6px 6px 0 #16161a";
                 }
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform = "";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = loading
+                e.currentTarget.style.transform = "";
+                e.currentTarget.style.boxShadow = loading
                   ? "none"
                   : "4px 4px 0 #16161a";
               }}

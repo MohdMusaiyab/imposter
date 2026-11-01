@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -218,7 +219,7 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 
 	rateLimitWindow := time.Now()
 	messageCount := 0
-	const maxMessages = 15
+	const maxMessages = 40
 	const windowDuration = 10 * time.Second
 
 	for {
@@ -449,6 +450,28 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 			if orderedIDs := parsePlayerIDsFromAction(action); len(orderedIDs) > 0 {
 				room.ReorderPlayers(orderedIDs)
 			}
+
+		case "SEND_CHAT":
+			if room.IsSingleDevice {
+				continue
+			}
+			rawText, _ := action["text"].(string)
+			if rawText == "" {
+				if payload, ok := action["payload"].(map[string]interface{}); ok {
+					rawText, _ = payload["text"].(string)
+				}
+			}
+			text := strings.TrimSpace(rawText)
+			if text == "" {
+				continue
+			}
+			runes := []rune(text)
+			if len(runes) > 200 {
+				text = string(runes[:200])
+			}
+			if _, err := room.AddChatMessage(playerID, text); err != nil {
+				continue
+			}
 		}
 
 		broadcastStateToRoom(room)
@@ -480,6 +503,11 @@ func mapRoomState(room *engine.Room, connectionPlayerID string) map[string]inter
 		playersExport[id] = pub
 	}
 
+	chats := room.ChatMessages
+	if chats == nil {
+		chats = []engine.ChatMessage{}
+	}
+
 	return map[string]interface{}{
 		"ID":               room.ID,
 		"IsSingleDevice":   room.IsSingleDevice,
@@ -490,6 +518,7 @@ func mapRoomState(room *engine.Room, connectionPlayerID string) map[string]inter
 		"ActiveCategories": room.ActiveCategories,
 		"CurrentCategory":  room.CurrentCategory,
 		"Players":          playersExport,
+		"ChatMessages":     chats,
 	}
 }
 

@@ -85,6 +85,7 @@ func (m *GlobalManager) CreateRoom(isPrivate, isSingleDevice bool) *Room {
 		Phase:            PhaseLobby,
 		Players:          make(map[string]*Player),
 		ActiveCategories: []string{},
+		ChatMessages:     []ChatMessage{},
 		LastActivity:     time.Now(),
 	}
 
@@ -115,7 +116,7 @@ func (m *GlobalManager) GetPublicRooms() []map[string]interface{} {
 
 	var public []map[string]interface{}
 	for _, room := range m.rooms {
-		if !room.IsPrivate && room.Phase == PhaseLobby {
+		if !room.IsPrivate && !room.IsSingleDevice && room.Phase == PhaseLobby {
 			room.Mu.RLock()
 			count := len(room.Players)
 			room.Mu.RUnlock()

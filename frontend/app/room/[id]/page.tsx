@@ -7,6 +7,7 @@ import type { GameState, Player } from "@/hooks/useGameSocket";
 import Link from "next/link";
 import { Space_Grotesk, Kalam, IBM_Plex_Mono } from "next/font/google";
 import CategorySelector from "@/app/components/CategorySelector";
+import ChatDrawer from "@/app/components/ChatDrawer";
 import { CATEGORIES, CategoryKey } from "@/types/categories";
 
 const EMPTY_CATEGORIES: string[] = [];
@@ -93,6 +94,24 @@ export default function GameRoomWrapper({
 
 function GameRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
+
+  // If visitor arrives at room link without a valid session for this room, redirect to join
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem("imposter_session");
+      if (!s) {
+        router.replace(`/room/join?code=${roomId}`);
+        return;
+      }
+      const session = JSON.parse(s);
+      if (!session || session.roomId !== roomId) {
+        router.replace(`/room/join?code=${roomId}`);
+      }
+    } catch {
+      router.replace(`/room/join?code=${roomId}`);
+    }
+  }, [roomId, router]);
+
   const { gameState, isConnected, error, sendAction } = useGameSocket(roomId);
 
   const localPlayerId = React.useMemo(() => {
@@ -303,10 +322,18 @@ function GameRoom({ roomId }: { roomId: string }) {
               paddingLeft: 14,
             }}
           >
-            ROOM{" "}
-            <span style={{ color: "#e8433a", fontWeight: 600 }}>
-              #{gameState.ID}
-            </span>
+            {gameState.IsSingleDevice ? (
+              <span style={{ color: "#8c5cd8", fontWeight: 700 }}>
+                📱 PASS &amp; PLAY (1 DEVICE)
+              </span>
+            ) : (
+              <>
+                ROOM{" "}
+                <span style={{ color: "#e8433a", fontWeight: 600 }}>
+                  #{gameState.ID}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -404,6 +431,17 @@ function GameRoom({ roomId }: { roomId: string }) {
       >
         {renderPhaseView()}
       </div>
+
+      {!gameState.IsSingleDevice && (
+        <ChatDrawer
+          messages={gameState.ChatMessages || []}
+          currentPlayer={currentPlayer}
+          localPlayerId={localPlayerId}
+          phase={gameState.Phase}
+          roomId={gameState.ID}
+          onSendMessage={(text) => sendAction("SEND_CHAT", { text })}
+        />
+      )}
     </div>
   );
 }
@@ -432,6 +470,49 @@ function LobbyView({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [newLocalName, setNewLocalName] = useState("");
   const [customImposters, setCustomImposters] = useState(1);
+  const [copied, setCopied] = useState(false);
+
+  const getInviteUrl = () => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/room/join?code=${gameState.ID}`;
+  };
+
+  const handleCopyInviteLink = async () => {
+    const url = getInviteUrl();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const input = document.createElement("input");
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleShare = async () => {
+    const url = getInviteUrl();
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join my Imposter game!",
+          text: `Join our Imposter room with code ${gameState.ID}:`,
+          url: url,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed
+      }
+    }
+    handleCopyInviteLink();
+  };
 
   // Safely sync with server state only when player data actually changes (value comparison)
   if (playersKey !== prevPlayersKey) {
@@ -508,6 +589,136 @@ function LobbyView({
           </span>
         )}
       </div>
+
+      {/* Prominent Room Code / Share Card for Multi-Device Mode */}
+      {!gameState.IsSingleDevice ? (
+        <div
+          style={{
+            background: "#fafafa",
+            border: "1.5px solid #16161a",
+            boxShadow: "3px 3px 0 #16161a",
+            borderRadius: 4,
+            padding: "16px 20px",
+            marginBottom: 24,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 14,
+          }}
+        >
+          <div>
+            <div
+              className={mono.className}
+              style={{
+                fontSize: 10,
+                letterSpacing: "1px",
+                color: "#e8433a",
+                fontWeight: 700,
+                marginBottom: 4,
+              }}
+            >
+              ROOM CODE · SHARE WITH PLAYERS
+            </div>
+            <div
+              className={space.className}
+              style={{
+                fontSize: "clamp(2rem, 5vw, 2.5rem)",
+                fontWeight: 800,
+                letterSpacing: "3px",
+                color: "#16161a",
+                lineHeight: 1,
+              }}
+            >
+              {gameState.ID}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleCopyInviteLink}
+              className={space.className}
+              style={{
+                padding: "10px 16px",
+                background: copied ? "#22a866" : "#16161a",
+                color: "#ffffff",
+                border: "1.5px solid #16161a",
+                borderRadius: 3,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>{copied ? "✓ COPIED LINK!" : "📋 COPY INVITE LINK"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className={space.className}
+              style={{
+                padding: "10px 14px",
+                background: "#ffffff",
+                color: "#16161a",
+                border: "1.5px solid #16161a",
+                borderRadius: 3,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span>🔗 SHARE</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            background: "#f0ecfc",
+            border: "1.5px solid #8c5cd8",
+            borderRadius: 4,
+            padding: "12px 16px",
+            marginBottom: 24,
+          }}
+        >
+          <div
+            className={mono.className}
+            style={{
+              fontSize: 10.5,
+              letterSpacing: "1px",
+              color: "#8c5cd8",
+              fontWeight: 700,
+              marginBottom: 3,
+            }}
+          >
+            📱 LOCAL PASS &amp; PLAY (HOTSEAT)
+          </div>
+          <div
+            style={{
+              fontSize: 12.5,
+              color: "#16161a",
+              lineHeight: 1.35,
+            }}
+          >
+            All players share this single device. Add names below. When the round starts, pass this phone around.
+          </div>
+        </div>
+      )}
 
       {/* Players List with Drag & Drop + Move Arrows */}
       <div
@@ -648,7 +859,7 @@ function LobbyView({
                 )}
 
                 {isHost && orderedPlayers.length > 1 && (
-                  <div style={{ display: "flex", gap: 2 }}>
+                  <div style={{ display: "flex", gap: 3 }}>
                     <button
                       type="button"
                       disabled={i === 0}
@@ -660,13 +871,16 @@ function LobbyView({
                       style={{
                         background: "#fff",
                         border: "1px solid #dcdce2",
-                        borderRadius: 2,
-                        padding: "2px 5px",
-                        fontSize: 9,
+                        borderRadius: 3,
+                        padding: "4px 8px",
+                        fontSize: 11,
                         cursor: i === 0 ? "not-allowed" : "pointer",
                         opacity: i === 0 ? 0.35 : 1,
                         color: "#16161a",
                         lineHeight: 1,
+                        minWidth: 26,
+                        minHeight: 26,
+                        touchAction: "manipulation",
                       }}
                     >
                       ▲
@@ -682,13 +896,16 @@ function LobbyView({
                       style={{
                         background: "#fff",
                         border: "1px solid #dcdce2",
-                        borderRadius: 2,
-                        padding: "2px 5px",
-                        fontSize: 9,
+                        borderRadius: 3,
+                        padding: "4px 8px",
+                        fontSize: 11,
                         cursor: i === orderedPlayers.length - 1 ? "not-allowed" : "pointer",
                         opacity: i === orderedPlayers.length - 1 ? 0.35 : 1,
                         color: "#16161a",
                         lineHeight: 1,
+                        minWidth: 26,
+                        minHeight: 26,
+                        touchAction: "manipulation",
                       }}
                     >
                       ▼

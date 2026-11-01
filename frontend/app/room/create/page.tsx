@@ -191,7 +191,7 @@ export default function CreateRoom() {
                 style={{
                   width: "100%",
                   padding: "12px 14px",
-                  fontSize: 15,
+                  fontSize: 16,
                   fontFamily: "inherit",
                   background: "#fafafa",
                   border: "1.5px solid #e9e9ee",
