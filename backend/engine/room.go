@@ -12,6 +12,10 @@ func (r *Room) AddPlayer(playerID, name string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
+	if r.KickedIDs != nil && r.KickedIDs[playerID] {
+		return errors.New("you have been kicked from this room")
+	}
+
 	normalizedName := strings.ReplaceAll(strings.ToLower(name), " ", "")
 
 	if player, exists := r.Players[playerID]; exists {
@@ -24,6 +28,8 @@ func (r *Room) AddPlayer(playerID, name string) error {
 			}
 		}
 		player.Name = name
+		player.IsConnected = true
+		player.DisconnectedAt = time.Time{}
 		r.LastActivity = time.Now()
 		return nil
 	}
@@ -45,13 +51,220 @@ func (r *Room) AddPlayer(playerID, name string) error {
 
 	isHost := len(r.Players) == 0
 	r.Players[playerID] = &Player{
-		ID:     playerID,
-		Name:   name,
-		IsHost: isHost,
-		Order:  r.nextOrder,
+		ID:          playerID,
+		Name:        name,
+		IsHost:      isHost,
+		Order:       r.nextOrder,
+		IsConnected: true,
 	}
 	r.nextOrder++
 	r.LastActivity = time.Now()
+	return nil
+}
+
+func (r *Room) SetPlayerConnected(playerID string, connected bool) {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	p, exists := r.Players[playerID]
+	if !exists {
+		return
+	}
+
+	p.IsConnected = connected
+	if !connected {
+		p.DisconnectedAt = time.Now()
+	} else {
+		p.DisconnectedAt = time.Time{}
+	}
+	r.LastActivity = time.Now()
+}
+
+func (r *Room) KickPlayer(hostPlayerID, targetPlayerID string) error {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	if !r.IsSingleDevice {
+		host, ok := r.Players[hostPlayerID]
+		if !ok || !host.IsHost {
+			return errors.New("only the host can kick players")
+		}
+
+		if hostPlayerID == targetPlayerID {
+			return errors.New("cannot kick yourself")
+		}
+	}
+
+	target, exists := r.Players[targetPlayerID]
+	if !exists {
+		return errors.New("player not found")
+	}
+
+	if r.Phase == PhaseLobby {
+		if r.KickedIDs == nil {
+			r.KickedIDs = make(map[string]bool)
+		}
+		if !r.IsSingleDevice {
+			r.KickedIDs[targetPlayerID] = true
+		}
+		delete(r.Players, targetPlayerID)
+
+		i := 0
+		for _, p := range r.Players {
+			p.Order = i
+			i++
+		}
+		r.nextOrder = i
+		r.LastActivity = time.Now()
+		return nil
+	}
+
+	if r.KickedIDs == nil {
+		r.KickedIDs = make(map[string]bool)
+	}
+	if !r.IsSingleDevice {
+		r.KickedIDs[targetPlayerID] = true
+	}
+
+	if r.IsSingleDevice {
+		delete(r.Players, targetPlayerID)
+		i := 0
+		for _, p := range r.Players {
+			p.Order = i
+			i++
+		}
+		r.nextOrder = i
+	} else {
+		target.IsDead = true
+	}
+
+	r.LastEliminated = target.Name + " (Removed)"
+	r.LastActivity = time.Now()
+
+	impostersAlive := 0
+	crewAlive := 0
+	for _, op := range r.Players {
+		if !op.IsDead {
+			if op.IsImposter {
+				impostersAlive++
+			} else {
+				crewAlive++
+			}
+		}
+	}
+
+	if impostersAlive == 0 {
+		r.Winner = "CREW"
+		r.Phase = PhaseResults
+		for _, mp := range r.Players {
+			if !mp.IsImposter {
+				mp.Score += 100
+			}
+		}
+	} else if impostersAlive >= crewAlive {
+		r.Winner = "IMPOSTER"
+		r.Phase = PhaseResults
+		for _, op := range r.Players {
+			if op.IsImposter {
+				op.Score += 250
+			}
+		}
+	} else {
+		if r.Phase == PhaseReveal {
+			allReady := true
+			for _, op := range r.Players {
+				if !op.IsDead && !op.IsReady {
+					allReady = false
+					break
+				}
+			}
+			if allReady {
+				r.Phase = PhaseDiscussion
+			}
+		} else if r.Phase == PhaseVoting {
+			allVoted := true
+			for _, op := range r.Players {
+				if !op.IsDead && !op.HasVoted {
+					allVoted = false
+					break
+				}
+			}
+			if allVoted {
+				r.tallyVotesLocked()
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Room) ForceAdvanceReveal(hostPlayerID string) error {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	if !r.IsSingleDevice {
+		host, ok := r.Players[hostPlayerID]
+		if !ok || !host.IsHost {
+			return errors.New("only the host can force advance")
+		}
+	}
+
+	if r.Phase != PhaseReveal {
+		return errors.New("can only force advance during reveal phase")
+	}
+
+	r.Phase = PhaseDiscussion
+	r.LastActivity = time.Now()
+	return nil
+}
+
+func (r *Room) ForceTallyVotes(hostPlayerID string) error {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	if !r.IsSingleDevice {
+		host, ok := r.Players[hostPlayerID]
+		if !ok || !host.IsHost {
+			return errors.New("only the host can force tally")
+		}
+	}
+
+	if r.Phase != PhaseVoting {
+		return errors.New("can only force tally during voting phase")
+	}
+
+	r.tallyVotesLocked()
+	r.LastActivity = time.Now()
+	return nil
+}
+
+func (r *Room) AbortToLobby(hostPlayerID string) error {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	if !r.IsSingleDevice {
+		host, ok := r.Players[hostPlayerID]
+		if !ok || !host.IsHost {
+			return errors.New("only the host can abort round")
+		}
+	}
+
+	r.Phase = PhaseLobby
+	r.ImposterWord = ""
+	r.CrewWord = ""
+	r.Winner = ""
+	r.LastEliminated = ""
+	r.CurrentCategory = ""
+	r.LastActivity = time.Now()
+
+	for _, p := range r.Players {
+		p.IsImposter = false
+		p.IsDead = false
+		p.HasVoted = false
+		p.VotedFor = ""
+		p.Word = ""
+		p.IsReady = false
+	}
 	return nil
 }
 
@@ -310,7 +523,12 @@ func (r *Room) tallyVotesLocked() {
 		return
 	}
 
-	elimPlayer := r.Players[eliminatedID]
+	elimPlayer, exists := r.Players[eliminatedID]
+	if !exists || elimPlayer == nil {
+		r.LastEliminated = "NO ONE"
+		r.Winner = "NONE"
+		return
+	}
 	elimPlayer.IsDead = true
 	r.LastEliminated = elimPlayer.Name
 

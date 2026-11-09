@@ -9,6 +9,7 @@ export interface Player {
   score: number;
   isReady: boolean;
   order: number;
+  isConnected?: boolean;
   Word?: string;
   IsImposter?: boolean;
 }
@@ -41,6 +42,7 @@ export function useGameSocket(roomId: string | null) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
@@ -50,6 +52,7 @@ export function useGameSocket(roomId: string | null) {
     if (!roomId) return;
 
     let isMounted = true;
+    let manualClose = false;
 
     const connect = () => {
       const sessionStr = localStorage.getItem("imposter_session");
@@ -82,6 +85,7 @@ export function useGameSocket(roomId: string | null) {
           return;
         }
         setIsConnected(true);
+        setIsReconnecting(false);
         setError(null);
         reconnectAttempts.current = 0;
       };
@@ -89,6 +93,14 @@ export function useGameSocket(roomId: string | null) {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+
+          if (data.type === "KICKED") {
+            manualClose = true;
+            setError(data.error || "You have been kicked by the host.");
+            localStorage.removeItem("imposter_session");
+            ws.close();
+            return;
+          }
 
           if (data.error) {
             setError(data.error);
@@ -110,17 +122,17 @@ export function useGameSocket(roomId: string | null) {
       };
 
       ws.onclose = () => {
-        if (!isMounted) return;
+        if (!isMounted || manualClose) return;
         setIsConnected(false);
-        setError("Connection lost. Reconnecting to game server...");
+        setIsReconnecting(true);
 
         const baseDelay = 1000;
-        const maxDelay = 15000;
+        const maxDelay = 10000;
         const backoffDelay = Math.min(
-          baseDelay * Math.pow(2, reconnectAttempts.current),
+          baseDelay * Math.pow(1.5, reconnectAttempts.current),
           maxDelay,
         );
-        const jitter = Math.floor(Math.random() * 500);
+        const jitter = Math.floor(Math.random() * 400);
         const nextAttemptMs = backoffDelay + jitter;
 
         reconnectAttempts.current++;
@@ -133,8 +145,35 @@ export function useGameSocket(roomId: string | null) {
 
     connect();
 
+    const handleWake = () => {
+      if (!isMounted || manualClose) return;
+      if (
+        !socketRef.current ||
+        socketRef.current.readyState === WebSocket.CLOSED ||
+        socketRef.current.readyState === WebSocket.CLOSING
+      ) {
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectAttempts.current = 0;
+        connect();
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleWake();
+      }
+    };
+
+    window.addEventListener("online", handleWake);
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       isMounted = false;
+      manualClose = true;
+      window.removeEventListener("online", handleWake);
+      document.removeEventListener("visibilitychange", handleVisibility);
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -162,5 +201,5 @@ export function useGameSocket(roomId: string | null) {
     [],
   );
 
-  return { gameState, isConnected, error, sendAction };
+  return { gameState, isConnected, isReconnecting, error, sendAction };
 }

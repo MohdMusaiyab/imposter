@@ -112,7 +112,8 @@ function GameRoom({ roomId }: { roomId: string }) {
     }
   }, [roomId, router]);
 
-  const { gameState, isConnected, error, sendAction } = useGameSocket(roomId);
+  const { gameState, isConnected, isReconnecting, error, sendAction } =
+    useGameSocket(roomId);
 
   const localPlayerId = React.useMemo(() => {
     try {
@@ -156,7 +157,7 @@ function GameRoom({ roomId }: { roomId: string }) {
               marginBottom: 16,
             }}
           >
-            GAME OVER · CONNECTION LOST
+            ROOM NOTICE
           </div>
           <p style={{ color: "#77788a", marginBottom: 24, fontSize: 14 }}>
             {error}
@@ -173,7 +174,7 @@ function GameRoom({ roomId }: { roomId: string }) {
     );
   }
 
-  if (!isConnected || !gameState) {
+  if (!gameState) {
     return (
       <div
         className={`board ${space.className}`}
@@ -186,7 +187,6 @@ function GameRoom({ roomId }: { roomId: string }) {
       >
         <div className="board-lines" />
         <div style={{ textAlign: "center" }}>
-          {}
           <div
             style={{
               width: 44,
@@ -290,6 +290,41 @@ function GameRoom({ roomId }: { roomId: string }) {
       style={{ minHeight: "100svh", display: "flex", flexDirection: "column" }}
     >
       <div className="board-lines" />
+
+      {isReconnecting && (
+        <div
+          style={{
+            position: "fixed",
+            top: 14,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 9999,
+            background: "#fff8e6",
+            border: "1.5px solid #f0b429",
+            borderRadius: 20,
+            padding: "6px 16px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#b07a00",
+          }}
+          className={mono.className}
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "#f0b429",
+              display: "inline-block",
+            }}
+          />
+          <span>Reconnecting to game server...</span>
+        </div>
+      )}
 
       {}
       <header
@@ -837,10 +872,53 @@ function LobbyView({
                       LEFT
                     </span>
                   )}
+                  {p.isConnected === false && (
+                    <span
+                      className={mono.className}
+                      style={{
+                        fontSize: 8.5,
+                        color: "#b07a00",
+                        background: "#fff8e6",
+                        border: "1px solid #f0b429",
+                        padding: "1px 4px",
+                        borderRadius: 2,
+                        marginLeft: 5,
+                      }}
+                    >
+                      RECONNECTING
+                    </span>
+                  )}
                 </span>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                {isHost && (gameState.IsSingleDevice ? orderedPlayers.length > 1 : (!p.isHost && !isMe)) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const label = gameState.IsSingleDevice ? "Remove" : "Kick";
+                      if (confirm(`${label} ${p.name}?`)) {
+                        sendAction("KICK_PLAYER", { targetId: p.id });
+                      }
+                    }}
+                    title={`${gameState.IsSingleDevice ? "Remove" : "Kick"} ${p.name}`}
+                    style={{
+                      background: "#fff0ef",
+                      border: "1px solid #e8433a",
+                      color: "#e8433a",
+                      borderRadius: 3,
+                      padding: "4px 7px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      lineHeight: 1,
+                    }}
+                    className={mono.className}
+                  >
+                    {gameState.IsSingleDevice ? "REMOVE" : "KICK"}
+                  </button>
+                )}
                 {p.isHost && (
                   <span
                     className={mono.className}
@@ -1198,7 +1276,7 @@ function DiscussionView({
             MOVE TO VOTING →
           </button>
           <button
-            onClick={() => sendAction("NEXT_ROUND")}
+            onClick={() => sendAction("ABORT_TO_LOBBY")}
             style={btnGhost}
             className={mono.className}
           >
@@ -1425,15 +1503,24 @@ function ResultsView({
       )}
 
       {isHost && (
-        <button
-          onClick={() =>
-            sendAction(gameContinues ? "CONTINUE_DISCUSSION" : "NEXT_ROUND")
-          }
-          style={btnPrimary}
-          className={space.className}
-        >
-          {gameContinues ? "RESUME DISCUSSION →" : "NEW ROUND →"}
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button
+            onClick={() =>
+              sendAction(gameContinues ? "CONTINUE_DISCUSSION" : "NEXT_ROUND")
+            }
+            style={btnPrimary}
+            className={space.className}
+          >
+            {gameContinues ? "RESUME DISCUSSION →" : "NEW ROUND →"}
+          </button>
+          <button
+            onClick={() => sendAction("ABORT_TO_LOBBY")}
+            style={btnGhost}
+            className={mono.className}
+          >
+            Back to Lobby
+          </button>
+        </div>
       )}
     </div>
   );
@@ -1547,13 +1634,26 @@ function RevealView({
       )}
 
       {isHost && (
-        <button
-          onClick={() => sendAction("NEXT_ROUND")}
-          style={{ ...btnGhost, marginTop: 20 }}
-          className={mono.className}
-        >
-          Abort Round / Back to Lobby
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+          <button
+            onClick={() => sendAction("FORCE_START_DISCUSSION")}
+            style={{
+              ...btnSecondary,
+              padding: "10px 18px",
+              fontSize: 13,
+            }}
+            className={space.className}
+          >
+            FORCE START DISCUSSION →
+          </button>
+          <button
+            onClick={() => sendAction("ABORT_TO_LOBBY")}
+            style={btnGhost}
+            className={mono.className}
+          >
+            Abort Round / Back to Lobby
+          </button>
+        </div>
       )}
     </div>
   );
@@ -1695,7 +1795,20 @@ function VotingView({
                     }}
                     className={space.className}
                   >
-                    {p.name}
+                    <span>{p.name}</span>
+                    {p.isConnected === false && (
+                      <span
+                        className={mono.className}
+                        style={{
+                          fontSize: 9,
+                          color: "#b07a00",
+                          marginLeft: 6,
+                          fontWeight: 500,
+                        }}
+                      >
+                        (reconnecting)
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1720,9 +1833,20 @@ function VotingView({
       )}
 
       {isHost && (
-        <div style={{ textAlign: "center", marginTop: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24, textAlign: "center" }}>
           <button
-            onClick={() => sendAction("NEXT_ROUND")}
+            onClick={() => sendAction("FORCE_TALLY_VOTES")}
+            style={{
+              ...btnSecondary,
+              padding: "10px 18px",
+              fontSize: 13,
+            }}
+            className={space.className}
+          >
+            FORCE TALLY VOTES →
+          </button>
+          <button
+            onClick={() => sendAction("ABORT_TO_LOBBY")}
             style={btnGhost}
             className={mono.className}
           >
@@ -1893,13 +2017,26 @@ function RevealViewSingleDevice({
       )}
 
       {isHost && (
-        <button
-          onClick={() => sendAction("NEXT_ROUND")}
-          style={{ ...btnGhost, marginTop: 20 }}
-          className={mono.className}
-        >
-          Abort Round / Back to Lobby
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+          <button
+            onClick={() => sendAction("FORCE_START_DISCUSSION")}
+            style={{
+              ...btnSecondary,
+              padding: "10px 18px",
+              fontSize: 13,
+            }}
+            className={space.className}
+          >
+            FORCE START DISCUSSION →
+          </button>
+          <button
+            onClick={() => sendAction("ABORT_TO_LOBBY")}
+            style={btnGhost}
+            className={mono.className}
+          >
+            Abort Round / Back to Lobby
+          </button>
+        </div>
       )}
     </div>
   );
@@ -2040,7 +2177,7 @@ function VotingViewSingleDevice({
           </button>
           <div style={{ textAlign: "center", marginTop: 16 }}>
             <button
-              onClick={() => sendAction("NEXT_ROUND")}
+              onClick={() => sendAction("ABORT_TO_LOBBY")}
               style={btnGhost}
               className={mono.className}
             >

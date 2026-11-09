@@ -16,17 +16,19 @@ const (
 )
 
 type Player struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	IsHost     bool   `json:"isHost"`
-	IsImposter bool   `json:"-"`
-	Word       string `json:"-"`
-	IsDead     bool   `json:"isDead"`
-	HasVoted   bool   `json:"hasVoted"`
-	VotedFor   string `json:"-"`
-	Score      int    `json:"score"`
-	IsReady    bool   `json:"isReady"`
-	Order      int    `json:"order"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	IsHost         bool      `json:"isHost"`
+	IsImposter     bool      `json:"-"`
+	Word           string    `json:"-"`
+	IsDead         bool      `json:"isDead"`
+	HasVoted       bool      `json:"hasVoted"`
+	VotedFor       string    `json:"-"`
+	Score          int       `json:"score"`
+	IsReady        bool      `json:"isReady"`
+	Order          int       `json:"order"`
+	IsConnected    bool      `json:"isConnected"`
+	DisconnectedAt time.Time `json:"-"`
 }
 
 type ChatMessage struct {
@@ -56,6 +58,7 @@ type Room struct {
 	LastActivity time.Time
 
 	UsedWords []uint
+	KickedIDs map[string]bool
 
 	Mu sync.RWMutex
 }
