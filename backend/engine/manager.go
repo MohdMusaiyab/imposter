@@ -86,6 +86,7 @@ func (m *GlobalManager) CreateRoom(isPrivate, isSingleDevice bool) *Room {
 		Players:          make(map[string]*Player),
 		ActiveCategories: []string{},
 		ChatMessages:     []ChatMessage{},
+		KickedIDs:        make(map[string]bool),
 		LastActivity:     time.Now(),
 	}
 

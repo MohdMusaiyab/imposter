@@ -181,3 +181,203 @@ func TestResetForNextRound(t *testing.T) {
 	}
 }
 
+func TestSetPlayerConnected(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	_ = room.StartGame("Dog", "Cat", 1)
+
+	room.SetPlayerConnected("p2", false)
+	if room.Players["p2"].IsConnected {
+		t.Error("expected p2 to be disconnected")
+	}
+	if room.Players["p2"].IsDead {
+		t.Error("disconnecting player must not mark them dead")
+	}
+	if room.Phase != engine.PhaseReveal {
+		t.Errorf("expected phase to remain Reveal, got %s", room.Phase)
+	}
+
+	room.SetPlayerConnected("p2", true)
+	if !room.Players["p2"].IsConnected {
+		t.Error("expected p2 to be connected")
+	}
+}
+
+func TestKickPlayer(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	if err := room.KickPlayer("p2", "p3"); err == nil {
+		t.Error("expected error when non-host attempts to kick")
+	}
+
+	if err := room.KickPlayer("p1", "p1"); err == nil {
+		t.Error("expected error when host attempts to kick self")
+	}
+
+	if err := room.KickPlayer("p1", "p2"); err != nil {
+		t.Fatalf("expected host to kick player 2, got err: %v", err)
+	}
+
+	if _, exists := room.Players["p2"]; exists {
+		t.Error("expected kicked player to be removed from room")
+	}
+
+	if err := room.AddPlayer("p2", "Bob"); err == nil {
+		t.Error("expected kicked player to be rejected from rejoining")
+	}
+}
+
+func TestForceAdvanceReveal(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	_ = room.StartGame("Apple", "Banana", 1)
+
+	if err := room.ForceAdvanceReveal("p2"); err == nil {
+		t.Error("expected non-host force advance to fail")
+	}
+
+	if err := room.ForceAdvanceReveal("p1"); err != nil {
+		t.Fatalf("expected host force advance to succeed, got: %v", err)
+	}
+
+	if room.Phase != engine.PhaseDiscussion {
+		t.Errorf("expected PhaseDiscussion, got %s", room.Phase)
+	}
+}
+
+func TestForceTallyVotes(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	_ = room.StartGame("Apple", "Banana", 1)
+	room.TransitionToVoting()
+
+	room.RegisterVote("p1", "p2")
+
+	if err := room.ForceTallyVotes("p2"); err == nil {
+		t.Error("expected non-host force tally to fail")
+	}
+
+	if err := room.ForceTallyVotes("p1"); err != nil {
+		t.Fatalf("expected host force tally to succeed, got: %v", err)
+	}
+
+	if room.Phase != engine.PhaseResults {
+		t.Errorf("expected PhaseResults, got %s", room.Phase)
+	}
+
+	if room.LastEliminated != "Bob" {
+		t.Errorf("expected Bob to be eliminated, got %s", room.LastEliminated)
+	}
+}
+
+func TestAbortToLobby(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	room.Players["p1"].Score = 100
+	_ = room.StartGame("Apple", "Banana", 1)
+
+	if err := room.AbortToLobby("p2"); err == nil {
+		t.Error("expected non-host abort to fail")
+	}
+
+	if err := room.AbortToLobby("p1"); err != nil {
+		t.Fatalf("expected host abort to succeed, got: %v", err)
+	}
+
+	if room.Phase != engine.PhaseLobby {
+		t.Errorf("expected PhaseLobby, got %s", room.Phase)
+	}
+
+	if room.Players["p1"].Score != 100 {
+		t.Errorf("expected score 100 preserved, got %d", room.Players["p1"].Score)
+	}
+
+	for _, p := range room.Players {
+		if p.IsDead || p.IsImposter || p.Word != "" || p.HasVoted || p.IsReady {
+			t.Errorf("player %s state was not reset on abort: %+v", p.Name, p)
+		}
+	}
+}
+
+func TestSingleDeviceKickPlayer(t *testing.T) {
+	room := createTestRoom(true)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	if err := room.KickPlayer("any_id", "p2"); err != nil {
+		t.Fatalf("expected single device kick to succeed: %v", err)
+	}
+
+	if _, exists := room.Players["p2"]; exists {
+		t.Error("expected p2 to be removed in single device mode")
+	}
+
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.StartGame("Apple", "Banana", 1)
+
+	if err := room.KickPlayer("any_id", "p3"); err != nil {
+		t.Fatalf("expected mid-game single device kick to succeed: %v", err)
+	}
+
+	if _, exists := room.Players["p3"]; exists {
+		t.Error("expected p3 to be removed from single device active match")
+	}
+}
+
+func TestSingleDeviceAbortToLobby(t *testing.T) {
+	room := createTestRoom(true)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	_ = room.StartGame("Apple", "Banana", 1)
+
+	if err := room.AbortToLobby("any_caller_id"); err != nil {
+		t.Fatalf("expected single device abort to lobby to succeed: %v", err)
+	}
+
+	if room.Phase != engine.PhaseLobby {
+		t.Errorf("expected PhaseLobby, got %s", room.Phase)
+	}
+}
+
+func TestKickPlayerMidGameMultiDevice(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+
+	_ = room.StartGame("Apple", "Banana", 1)
+	room.Players["p2"].IsImposter = true
+	room.Players["p1"].IsImposter = false
+	room.Players["p3"].IsImposter = false
+
+	if err := room.KickPlayer("p1", "p2"); err != nil {
+		t.Fatalf("expected host kick to succeed mid-game: %v", err)
+	}
+
+	if !room.Players["p2"].IsDead {
+		t.Error("expected kicked player to be marked dead")
+	}
+
+	if room.Winner != "CREW" {
+		t.Errorf("expected CREW win after sole imposter kicked, got %s", room.Winner)
+	}
+}
+

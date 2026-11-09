@@ -198,23 +198,34 @@ func parsePlayerIDsFromAction(action map[string]interface{}) []string {
 func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 	defer func() {
 		connMutex.Lock()
-		if roomClients[room.ID] != nil {
+		isStillActiveSocket := false
+		if roomClients[room.ID] != nil && roomClients[room.ID][playerID] == conn {
 			delete(roomClients[room.ID], playerID)
+			if len(roomClients[room.ID]) == 0 {
+				delete(roomClients, room.ID)
+			}
+		} else if roomClients[room.ID] != nil && roomClients[room.ID][playerID] != nil {
+			isStillActiveSocket = true
 		}
 		connMutex.Unlock()
 		conn.Close()
 
-		go func() {
-			time.Sleep(10 * time.Second)
-			connMutex.RLock()
-			_, stillConnected := roomClients[room.ID][playerID]
-			connMutex.RUnlock()
+		if !isStillActiveSocket {
+			room.SetPlayerConnected(playerID, false)
+			broadcastStateToRoom(room)
 
-			if !stillConnected {
-				room.RemovePlayer(playerID)
-				broadcastStateToRoom(room)
-			}
-		}()
+			go func(expectedConn *websocket.Conn) {
+				time.Sleep(75 * time.Second)
+				connMutex.RLock()
+				currentConn, stillConnected := roomClients[room.ID][playerID]
+				connMutex.RUnlock()
+
+				if !stillConnected || currentConn == expectedConn {
+					room.RemovePlayer(playerID)
+					broadcastStateToRoom(room)
+				}
+			}(conn)
+		}
 	}()
 
 	rateLimitWindow := time.Now()
@@ -276,6 +287,29 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 				c.Close()
 			}
 			return
+
+		case "KICK_PLAYER":
+			if !isHost {
+				continue
+			}
+			targetId, _ := action["targetId"].(string)
+			if targetId == "" {
+				if payload, ok := action["payload"].(map[string]interface{}); ok {
+					targetId, _ = payload["targetId"].(string)
+				}
+			}
+			if err := room.KickPlayer(playerID, targetId); err != nil {
+				continue
+			}
+			connMutex.Lock()
+			if targetConn, exists := roomClients[room.ID][targetId]; exists {
+				targetConn.WriteJSON(gin.H{"type": "KICKED", "error": "You have been kicked by the host."})
+				targetConn.Close()
+				delete(roomClients[room.ID], targetId)
+			}
+			connMutex.Unlock()
+			broadcastStateToRoom(room)
+			continue
 
 		case "START":
 			if !isHost {
@@ -349,6 +383,30 @@ func readPump(conn *websocket.Conn, room *engine.Room, playerID string) {
 
 		case "MARK_READY":
 			room.MarkReady(playerID)
+
+		case "FORCE_START_DISCUSSION":
+			if !isHost {
+				continue
+			}
+			if err := room.ForceAdvanceReveal(playerID); err != nil {
+				continue
+			}
+
+		case "FORCE_TALLY_VOTES":
+			if !isHost {
+				continue
+			}
+			if err := room.ForceTallyVotes(playerID); err != nil {
+				continue
+			}
+
+		case "ABORT_TO_LOBBY":
+			if !isHost {
+				continue
+			}
+			if err := room.AbortToLobby(playerID); err != nil {
+				continue
+			}
 
 		case "CONTINUE_DISCUSSION":
 			if !isHost {
@@ -486,14 +544,15 @@ func mapRoomState(room *engine.Room, connectionPlayerID string) map[string]inter
 
 	for id, p := range room.Players {
 		pub := map[string]interface{}{
-			"id":       p.ID,
-			"name":     p.Name,
-			"isHost":   p.IsHost,
-			"isDead":   p.IsDead,
-			"hasVoted": p.HasVoted,
-			"score":    p.Score,
-			"isReady":  p.IsReady,
-			"order":    p.Order,
+			"id":          p.ID,
+			"name":        p.Name,
+			"isHost":      p.IsHost,
+			"isDead":      p.IsDead,
+			"hasVoted":    p.HasVoted,
+			"score":       p.Score,
+			"isReady":     p.IsReady,
+			"order":       p.Order,
+			"isConnected": p.IsConnected,
 		}
 
 		if id == connectionPlayerID || room.Phase == engine.PhaseResults || room.IsSingleDevice {
