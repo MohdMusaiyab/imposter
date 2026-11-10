@@ -1,6 +1,7 @@
 package engine_test
 
 import (
+	"fmt"
 	"testing"
 
 	"imposter-backend/engine"
@@ -378,6 +379,150 @@ func TestKickPlayerMidGameMultiDevice(t *testing.T) {
 
 	if room.Winner != "CREW" {
 		t.Errorf("expected CREW win after sole imposter kicked, got %s", room.Winner)
+	}
+}
+
+func TestMultiImposterWinConditions(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+	_ = room.AddPlayer("p4", "David")
+	_ = room.AddPlayer("p5", "Eve")
+
+	_ = room.StartGame("Apple", "Banana", 2)
+	room.Players["p1"].IsImposter = false
+	room.Players["p2"].IsImposter = false
+	room.Players["p3"].IsImposter = false
+	room.Players["p4"].IsImposter = true
+	room.Players["p5"].IsImposter = true
+
+	room.TransitionToVoting()
+	room.RegisterVote("p1", "p4")
+	room.RegisterVote("p2", "p4")
+	room.RegisterVote("p3", "p4")
+	room.RegisterVote("p4", "p1")
+	room.RegisterVote("p5", "p1")
+
+	if room.Winner != "NONE" {
+		t.Errorf("expected round to continue with Winner NONE, got %s", room.Winner)
+	}
+	if !room.Players["p4"].IsDead {
+		t.Error("expected p4 to be dead")
+	}
+
+	room.AdvanceToDiscussion()
+	room.TransitionToVoting()
+	room.RegisterVote("p1", "p5")
+	room.RegisterVote("p2", "p5")
+	room.RegisterVote("p3", "p5")
+	room.RegisterVote("p5", "p1")
+
+	if room.Winner != "CREW" {
+		t.Errorf("expected CREW win after all imposters eliminated, got %s", room.Winner)
+	}
+	if room.Players["p1"].Score != 100 || room.Players["p2"].Score != 100 || room.Players["p3"].Score != 100 {
+		t.Errorf("expected surviving crew to receive 100 score, got p1=%d, p2=%d, p3=%d",
+			room.Players["p1"].Score, room.Players["p2"].Score, room.Players["p3"].Score)
+	}
+}
+
+func TestImposterParityVictory(t *testing.T) {
+	room := createTestRoom(false)
+	_ = room.AddPlayer("p1", "Alice")
+	_ = room.AddPlayer("p2", "Bob")
+	_ = room.AddPlayer("p3", "Charlie")
+	_ = room.AddPlayer("p4", "David")
+
+	_ = room.StartGame("Apple", "Banana", 1)
+	room.Players["p1"].IsImposter = false
+	room.Players["p2"].IsImposter = false
+	room.Players["p3"].IsImposter = false
+	room.Players["p4"].IsImposter = true
+
+	room.TransitionToVoting()
+	room.RegisterVote("p1", "p2")
+	room.RegisterVote("p3", "p2")
+	room.RegisterVote("p4", "p2")
+	room.RegisterVote("p2", "p1")
+
+	if room.Winner != "NONE" {
+		t.Errorf("expected round to continue with 1 imposter vs 2 crew, got %s", room.Winner)
+	}
+
+	room.AdvanceToDiscussion()
+	room.TransitionToVoting()
+	room.RegisterVote("p1", "p3")
+	room.RegisterVote("p4", "p3")
+	room.RegisterVote("p3", "p1")
+
+	if room.Winner != "IMPOSTER" {
+		t.Errorf("expected IMPOSTER victory at parity (1 imposter vs 1 crew), got %s", room.Winner)
+	}
+	if room.Players["p4"].Score != 250 {
+		t.Errorf("expected imposter to receive 250 score, got %d", room.Players["p4"].Score)
+	}
+}
+
+func TestImposterCountClamping(t *testing.T) {
+	testCases := []struct {
+		playerCount int
+		requested   int
+		expected    int
+	}{
+		{3, 2, 1},
+		{4, 3, 1},
+		{5, 4, 2},
+		{6, 5, 2},
+		{7, 5, 3},
+		{3, 0, 1},
+	}
+
+	for _, tc := range testCases {
+		room := createTestRoom(false)
+		for i := 0; i < tc.playerCount; i++ {
+			_ = room.AddPlayer(fmt.Sprintf("p%d", i), fmt.Sprintf("Player%d", i))
+		}
+		_ = room.StartGame("WordA", "WordB", tc.requested)
+
+		actualImps := 0
+		for _, p := range room.Players {
+			if p.IsImposter {
+				actualImps++
+			}
+		}
+
+		if actualImps != tc.expected {
+			t.Errorf("playerCount=%d, requested=%d: expected %d imposters, got %d",
+				tc.playerCount, tc.requested, tc.expected, actualImps)
+		}
+	}
+}
+
+func TestHostCreatorPreservation(t *testing.T) {
+	room := createTestRoom(false)
+	room.CreatorID = "creator_alice"
+
+	if err := room.AddPlayer("guest_bob", "Bob"); err != nil {
+		t.Fatalf("failed to add guest player: %v", err)
+	}
+
+	if room.Players["guest_bob"].IsHost {
+		t.Error("guest player who connected first should not be host")
+	}
+
+	if err := room.AddPlayer("creator_alice", "Alice"); err != nil {
+		t.Fatalf("failed to add creator: %v", err)
+	}
+
+	if !room.Players["creator_alice"].IsHost {
+		t.Error("creator must be host even if connecting after other players")
+	}
+
+	room.RemovePlayer("creator_alice")
+
+	if !room.Players["guest_bob"].IsHost {
+		t.Error("host must transfer to remaining player after creator leaves")
 	}
 }
 

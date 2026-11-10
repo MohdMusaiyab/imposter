@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -11,8 +12,8 @@ import (
 )
 
 const (
-	roomTTL = 60 * time.Minute
-
+	roomTTL         = 60 * time.Minute
+	emptyRoomTTL    = 10 * time.Minute
 	cleanupInterval = 10 * time.Minute
 )
 
@@ -42,10 +43,10 @@ func (m *GlobalManager) sweepIdleRooms() {
 	var stale []string
 	for id, room := range m.rooms {
 		room.Mu.RLock()
-		idle := now.Sub(room.LastActivity) > roomTTL
-		empty := len(room.Players) == 0
+		timeSinceActivity := now.Sub(room.LastActivity)
+		isStale := timeSinceActivity > roomTTL || (len(room.Players) == 0 && timeSinceActivity > emptyRoomTTL)
 		room.Mu.RUnlock()
-		if idle || empty {
+		if isStale {
 			stale = append(stale, id)
 		}
 	}
@@ -64,22 +65,28 @@ func (m *GlobalManager) sweepIdleRooms() {
 	log.Printf("[Cleanup] Evicted %d idle/empty room(s)", len(stale))
 }
 
-func (m *GlobalManager) CreateRoom(isPrivate, isSingleDevice bool) *Room {
+func (m *GlobalManager) CreateRoom(creatorID string, isPrivate, isSingleDevice bool) *Room {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	code := generateRoomCode()
+	codeBytes := 3
+	code := generateRoomCode(codeBytes)
 	attempts := 0
 	for m.rooms[code] != nil {
-		code = generateRoomCode()
 		attempts++
+		if attempts > 50 {
+			codeBytes = 4
+		}
+		code = generateRoomCode(codeBytes)
 		if attempts > 100 {
+			code = fmt.Sprintf("%s%d", generateRoomCode(4), time.Now().UnixNano()%1000)
 			break
 		}
 	}
 
 	newRoom := &Room{
 		ID:             code,
+		CreatorID:      creatorID,
 		IsSingleDevice: isSingleDevice,
 		IsPrivate:      isPrivate,
 		Phase:            PhaseLobby,
@@ -131,10 +138,10 @@ func (m *GlobalManager) GetPublicRooms() []map[string]interface{} {
 	return public
 }
 
-func generateRoomCode() string {
-	b := make([]byte, 3)
+func generateRoomCode(n int) string {
+	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
-		return "FALLBK"
+		return strings.ToUpper(hex.EncodeToString([]byte(fmt.Sprintf("%d", time.Now().UnixNano()))[:n]))
 	}
 	return strings.ToUpper(hex.EncodeToString(b))
 }

@@ -49,7 +49,12 @@ func (r *Room) AddPlayer(playerID, name string) error {
 		return errors.New("room is full (10 players max)")
 	}
 
-	isHost := len(r.Players) == 0
+	isHost := false
+	if r.CreatorID != "" {
+		isHost = (playerID == r.CreatorID)
+	} else {
+		isHost = (len(r.Players) == 0)
+	}
 	r.Players[playerID] = &Player{
 		ID:          playerID,
 		Name:        name,
@@ -141,35 +146,9 @@ func (r *Room) KickPlayer(hostPlayerID, targetPlayerID string) error {
 	r.LastEliminated = target.Name + " (Removed)"
 	r.LastActivity = time.Now()
 
-	impostersAlive := 0
-	crewAlive := 0
-	for _, op := range r.Players {
-		if !op.IsDead {
-			if op.IsImposter {
-				impostersAlive++
-			} else {
-				crewAlive++
-			}
-		}
-	}
+	r.evaluateOutcomeLocked()
 
-	if impostersAlive == 0 {
-		r.Winner = "CREW"
-		r.Phase = PhaseResults
-		for _, mp := range r.Players {
-			if !mp.IsImposter {
-				mp.Score += 100
-			}
-		}
-	} else if impostersAlive >= crewAlive {
-		r.Winner = "IMPOSTER"
-		r.Phase = PhaseResults
-		for _, op := range r.Players {
-			if op.IsImposter {
-				op.Score += 250
-			}
-		}
-	} else {
+	if r.Winner == "NONE" {
 		if r.Phase == PhaseReveal {
 			allReady := true
 			for _, op := range r.Players {
@@ -290,38 +269,11 @@ func (r *Room) RemovePlayer(playerID string) {
 		if p.IsDead {
 		} else {
 			p.IsDead = true
+			r.LastEliminated = p.Name + " (Left Match)"
 
-			impostersAlive := 0
-			crewAlive := 0
-			for _, op := range r.Players {
-				if !op.IsDead {
-					if op.IsImposter {
-						impostersAlive++
-					} else {
-						crewAlive++
-					}
-				}
-			}
+			r.evaluateOutcomeLocked()
 
-			if impostersAlive == 0 {
-				r.Winner = "CREW"
-				r.Phase = PhaseResults
-				r.LastEliminated = p.Name + " (Left Match)"
-				for _, mp := range r.Players {
-					if !mp.IsImposter {
-						mp.Score += 100
-					}
-				}
-			} else if impostersAlive >= crewAlive {
-				r.Winner = "IMPOSTER"
-				r.Phase = PhaseResults
-				r.LastEliminated = p.Name + " (Left Match)"
-				for _, op := range r.Players {
-					if op.IsImposter {
-						op.Score += 250
-					}
-				}
-			} else {
+			if r.Winner == "NONE" {
 				if r.Phase == PhaseReveal {
 					allReady := true
 					for _, op := range r.Players {
@@ -358,6 +310,7 @@ func (r *Room) RemovePlayer(playerID string) {
 				continue
 			}
 			other.IsHost = true
+			r.CreatorID = other.ID
 			break
 		}
 	}
@@ -388,15 +341,14 @@ func (r *Room) StartGame(crewWord, imposterWord string, customImposters int) err
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	numImps := customImposters
-
-	// Sanity check: prevent imposters >= crew
-	if numImps >= len(pids)/2 && len(pids) > 3 {
-		numImps = (len(pids) / 2) - 1
-	} else if numImps >= len(pids) {
-		numImps = 1 // absolute fallback for <4 players if user sent high custom override
+	maxImps := (len(pids) - 1) / 2
+	if maxImps < 1 {
+		maxImps = 1
 	}
-
+	numImps := customImposters
+	if numImps > maxImps {
+		numImps = maxImps
+	}
 	if numImps < 1 {
 		numImps = 1
 	}
@@ -532,31 +484,7 @@ func (r *Room) tallyVotesLocked() {
 	elimPlayer.IsDead = true
 	r.LastEliminated = elimPlayer.Name
 
-	if elimPlayer.IsImposter {
-		r.Winner = "CREW"
-		for _, p := range r.Players {
-			if !p.IsImposter {
-				p.Score += 100
-			}
-		}
-	} else {
-		aliveCount := 0
-		for _, p := range r.Players {
-			if !p.IsDead {
-				aliveCount++
-			}
-		}
-		if aliveCount <= 2 {
-			r.Winner = "IMPOSTER"
-			for _, p := range r.Players {
-				if p.IsImposter {
-					p.Score += 250
-				}
-			}
-		} else {
-			r.Winner = "NONE"
-		}
-	}
+	r.evaluateOutcomeLocked()
 }
 
 func (r *Room) ForceEliminate(targetID string) {
@@ -577,30 +505,44 @@ func (r *Room) ForceEliminate(targetID string) {
 	r.Phase = PhaseResults
 	r.LastActivity = time.Now()
 
-	if elimPlayer.IsImposter {
+	r.evaluateOutcomeLocked()
+}
+
+func (r *Room) evaluateOutcomeLocked() {
+	if r.Winner == "CREW" || r.Winner == "IMPOSTER" {
+		return
+	}
+
+	impostersAlive := 0
+	crewAlive := 0
+	for _, p := range r.Players {
+		if !p.IsDead {
+			if p.IsImposter {
+				impostersAlive++
+			} else {
+				crewAlive++
+			}
+		}
+	}
+
+	if impostersAlive == 0 {
 		r.Winner = "CREW"
+		r.Phase = PhaseResults
 		for _, p := range r.Players {
 			if !p.IsImposter {
 				p.Score += 100
 			}
 		}
-	} else {
-		aliveCount := 0
+	} else if impostersAlive >= crewAlive {
+		r.Winner = "IMPOSTER"
+		r.Phase = PhaseResults
 		for _, p := range r.Players {
-			if !p.IsDead {
-				aliveCount++
+			if p.IsImposter {
+				p.Score += 250
 			}
 		}
-		if aliveCount <= 2 {
-			r.Winner = "IMPOSTER"
-			for _, p := range r.Players {
-				if p.IsImposter {
-					p.Score += 250
-				}
-			}
-		} else {
-			r.Winner = "NONE"
-		}
+	} else {
+		r.Winner = "NONE"
 	}
 }
 

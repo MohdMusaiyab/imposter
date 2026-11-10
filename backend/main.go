@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"imposter-backend/db"
+	"imposter-backend/engine"
 	"imposter-backend/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -41,9 +42,19 @@ func CORSMiddleware() gin.HandlerFunc {
 func main() {
 	_ = godotenv.Load()
 
+	if os.Getenv("GIN_MODE") == "release" {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" || secret == "dev-secret-change-in-production" {
+			log.Fatalf("FATAL: JWT_SECRET must be configured in release mode")
+		}
+	}
+
 	if err := db.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	engine.Manager.StartCleanup()
+
 	r := gin.Default()
 	r.Use(CORSMiddleware())
 
