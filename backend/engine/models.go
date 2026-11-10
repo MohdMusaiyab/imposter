@@ -42,6 +42,7 @@ type ChatMessage struct {
 
 type Room struct {
 	ID             string
+	CreatorID      string
 	IsSingleDevice bool
 	IsPrivate      bool
 	Phase          GamePhase

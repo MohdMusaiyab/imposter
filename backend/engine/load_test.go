@@ -321,7 +321,7 @@ func BenchmarkMultiRoomLoad(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			r := engine.Manager.CreateRoom(false, false)
+			r := engine.Manager.CreateRoom("", false, false)
 			_ = r.AddPlayer("p1", "BenchUser")
 			_, _ = r.AddChatMessage("p1", "Load test")
 		}

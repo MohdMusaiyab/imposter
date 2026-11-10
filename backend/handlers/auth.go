@@ -26,6 +26,8 @@ func jwtSecret() []byte {
 }
 
 func IssueToken(playerID, roomID string, isHost bool) string {
+	playerID = strings.ReplaceAll(playerID, ":", "_")
+	roomID = strings.ReplaceAll(roomID, ":", "_")
 	isHostStr := "0"
 	if isHost {
 		isHostStr = "1"

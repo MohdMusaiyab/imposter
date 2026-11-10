@@ -20,7 +20,7 @@ func HandleCreateRoom(c *gin.Context) {
 		return
 	}
 
-	room := engine.Manager.CreateRoom(req.IsPrivate, req.IsSingleDevice)
+	room := engine.Manager.CreateRoom(req.PlayerID, req.IsPrivate, req.IsSingleDevice)
 	token := IssueToken(req.PlayerID, room.ID, true)
 
 	c.JSON(http.StatusOK, gin.H{

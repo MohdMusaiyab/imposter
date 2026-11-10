@@ -43,10 +43,11 @@ Imposter is a fast-paced multiplayer deduction game designed for friends, partie
 ## ✨ Features & Highlights
 
 - **Interactive Turn Reordering:** The host can drag-and-drop or tap to rearrange player turn order in the lobby to customize the clue-giving circle before starting.
+- **Host Game Controls:** Host can kick players at any phase, force-advance reveal to discussion, force-tally votes if players stall, or abort rounds back to lobby across both Single-Device and Multi-Device modes.
 - **In-Room "Chat & Discuss":** Built-in floating chat drawer with an unread badge counter. Spectator muting is enforced automatically so eliminated players cannot spoil the game during active discussion or voting.
 - **1-Tap Invite Links:** Copy invite links or share via native Web Share API. Anyone opening the link gets the room code auto-filled instantly.
 - **19 Curated Word Packs:** Over 400+ words across themes like Food & Drink, Movies & TV, Gaming, Science & Tech, Indian Regional Words, Anime, and more.
-- **Reconnection Protection:** 10-second automatic grace period keeps your spot if your mobile connection temporarily drops or your phone locks.
+- **Reconnection Protection:** 75-second automatic grace period keeps your spot if your mobile connection temporarily drops or your phone locks.
 - **Mobile-First Design:** Responsive detective corkboard theme with 16px inputs to prevent iOS Safari auto-zoom and smooth 60 FPS animations.
 
 ---
@@ -82,11 +83,11 @@ cd frontend && npm run lint && npx tsc --noEmit
 
 | Specification | Detail |
 | :--- | :--- |
-| **Player Count** | 3 to 12 players per room |
+| **Player Count** | 3 to 10 players per room |
 | **Word Categories** | 19 theme packs (400+ words) |
 | **Chat Buffer** | 80 recent messages stored in-memory per room |
 | **Chat Rate Limit** | Max 40 messages per 10 seconds per user |
-| **Reconnect Grace Window** | 10 seconds on disconnect before forfeit |
+| **Reconnect Grace Window** | 75 seconds on disconnect before forfeit |
 | **Frontend Stack** | Next.js 14 (App Router), React, TypeScript, CSS Variables |
 | **Backend Stack** | Go (Golang) 1.22+, Gorilla WebSockets, Gin router |
 | **Database** | PostgreSQL (Neon / Supabase) with GORM |
@@ -99,14 +100,18 @@ cd frontend && npm run lint && npx tsc --noEmit
 imposter/
 ├── backend/
 │   ├── engine/             # Game room logic and state machine
-│   │   ├── manager.go      # Room registry
+│   │   ├── manager.go      # Room registry & background cleanup sweeper
+│   │   ├── manager_test.go # Unit tests for cleanup & collision resilience
 │   │   ├── models.go       # Room, Player, and Chat structs
 │   │   ├── room.go         # Game phases, turn ordering & chat handler
 │   │   ├── room_test.go    # Unit tests for room & chat logic
 │   │   └── load_test.go    # Concurrency stress tests & throughput benchmarks
 │   ├── handlers/           # HTTP and WebSocket route handlers
+│   │   ├── auth.go         # HMAC token signing & verification
+│   │   ├── auth_test.go    # Unit tests for token security & delimiter sanitization
 │   │   ├── room.go         # Room creation & joining logic
-│   │   └── ws.go           # WebSocket real-time connection hub
+│   │   ├── ws.go           # WebSocket real-time connection hub (thread-safe SafeConn)
+│   │   └── ws_test.go      # Unit tests for role secrecy & state broadcasting
 │   ├── models/             # Word categories and dictionary data
 │   │   ├── categories.go   # 19 category definitions
 │   │   └── categories_test.go # Unit tests for categories
@@ -147,6 +152,7 @@ imposter/
    ```env
    PORT=9999
    FRONTEND_URL=http://localhost:3000
+   JWT_SECRET=dev-secret-change-in-production
    DATABASE_URL=postgres://user:password@localhost:5432/imposter?sslmode=disable
    ```
 3. Run tests and start the server:
